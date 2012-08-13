@@ -1,5 +1,3 @@
-import com.jsuereth.sbtsite.SiteKeys
-
 ScriptedPlugin.scriptedSettings
 
 name := "sbt-source-align"
