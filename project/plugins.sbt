@@ -5,5 +5,5 @@ resolvers += Resolver.url("sbt-plugin-releases", new URL("http://scalasbt.artifa
 resolvers += "jgit-repo" at "http://download.eclipse.org/jgit/maven"
 
 libraryDependencies <+= (sbtVersion) { sv =>
-  "org.scala-sbt" %% "scripted-plugin" % sv
+  "org.scala-sbt" % "scripted-plugin" % sv
 }
