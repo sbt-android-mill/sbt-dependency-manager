@@ -18,18 +18,22 @@ Create a
 
 file that looks like the following:
 
+```scala
     import sbt._
     object PluginDef extends Build {
       override def projects = Seq(root)
       lazy val root = Project("plugins", file(".")) dependsOn(ssa)
       lazy val ssa = uri("git://github.com/sbt-android-mill/sbt-source-align.git")
     }
+```
 
 You may find more information about Build.scala at [https://github.com/harrah/xsbt/wiki/Plugins](https://github.com/harrah/xsbt/wiki/Plugins)
 
 Then in your _build.sbt_ file, simply add:
 
+``` scala
     sbt.source.align.Align.alignSettings
+```
 
 You may find sample project at _src/sbt-test/source-align/simple_
 
@@ -37,11 +41,15 @@ You may find sample project at _src/sbt-test/source-align/simple_
 
 By default aligned jars saved to _target/align_ Change _update-align-path_ or add to your project something like
 
+``` scala
     alignPath <<= (target in LocalRootProject) map { _ / "my-align-dir" }
+```
 
 or
 
+``` scala
     alignPath <<= (baseDirectory) (_ / "my-aling-dir")
+```
 
 ### Align only project dependencies ###
 

@@ -43,10 +43,10 @@ import sbt.Keys._
 import sbt._
 
 object Align extends Plugin {
-  val alignPath = TaskKey[File]("update-align-path")
-  val alignFullTask = TaskKey[UpdateReport]("update-align-sbt-classifiers")
-  val alignUserTask = TaskKey[UpdateReport]("update-align-classifiers")
-  val alignSettings = Seq(
+  lazy val alignPath = TaskKey[File]("update-align-path")
+  lazy val alignFullTask = TaskKey[UpdateReport]("update-align-sbt-classifiers")
+  lazy val alignUserTask = TaskKey[UpdateReport]("update-align-classifiers")
+  lazy val alignSettings = Seq(
     alignPath <<= (target in LocalRootProject) map { _ / "align" },
     alignFullTask <<= updateSbtClassifiersAndFixBrokenAlign,
     alignUserTask <<= updateClassifiersAndFixBrokenAlign,
