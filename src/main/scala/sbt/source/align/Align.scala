@@ -3,7 +3,7 @@
  * For example, it is allow easy source code lookup for IDE while developing SBT plugins (not only).
  *
  * Copyright (c) 2012, Alexey Aksenov ezh@ezh.msk.ru. All rights reserved.
- * 
+ *
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,24 +44,34 @@ import sbt._
 
 object Align extends Plugin {
   lazy val alignPath = TaskKey[File]("update-align-path")
-  lazy val alignFullTask = TaskKey[UpdateReport]("update-align-sbt-classifiers")
-  lazy val alignUserTask = TaskKey[UpdateReport]("update-align-classifiers")
+  lazy val alignSkipOrganization = SettingKey[Seq[String]]("update-align-skip-organization")
+  lazy val alignTask = TaskKey[UpdateReport]("update-align")
   lazy val alignSettings = Seq(
     alignPath <<= (target in LocalRootProject) map { _ / "align" },
-    alignFullTask <<= updateSbtClassifiersAndFixBrokenAlign,
-    alignUserTask <<= updateClassifiersAndFixBrokenAlign,
+    alignSkipOrganization := Seq("org.scala-lang", "org.scala-sbt"),
+    alignTask <<= updateClassifiersAndFixBrokenAlign,
     // add empty classifier ""
     transitiveClassifiers in Global :== Seq("", SourceClassifier, DocClassifier))
+  private[this] def restrictedCopy(m: ModuleID, confs: Boolean) =
+    ModuleID(m.organization, m.name, m.revision, crossVersion = m.crossVersion, extraAttributes = m.extraAttributes, configurations = if (confs) m.configurations else None)
+
   // update-sbt-classifiers with sources align
-  def updateSbtClassifiersAndFixBrokenAlign = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
-    ivyScala, target in LocalRootProject, appConfiguration, alignPath, streams) map {
-      (is, mod, c, ivyScala, out, app, path, s) =>
-        withExcludes(out, mod.classifiers, lock(app)) { excludes =>
-          // do default update-sbt-classifiers
-          val report = IvyActions.transitiveScratch(is, "sbt", GetClassifiersConfiguration(mod, excludes, c, ivyScala), s.log)
-          // process UpdateReport
+  def updateClassifiersAndFixBrokenAlign = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
+    ivyScala, target in LocalRootProject, appConfiguration, alignPath, libraryDependencies, alignSkipOrganization, streams) map {
+      (is, origClassifiersModule, c, ivyScala, out, app, path, libDeps, skipOrganization, s) =>
+        withExcludes(out, origClassifiersModule.classifiers, lock(app)) { excludes =>
+          import origClassifiersModule.{ id => origClassifiersModuleID, modules => origClassifiersModuleDeps }
+          // do default update-sbt-classifiers with libDeps
+          val extClassifiersModuleDeps = origClassifiersModuleDeps ++ libDeps.filter(module => !skipOrganization.exists(_ == module.organization))
+          val customConfig = GetClassifiersConfiguration(origClassifiersModule, excludes, c, ivyScala)
+          val customBaseModuleID = restrictedCopy(origClassifiersModuleID, true).copy(name = origClassifiersModuleID.name + "$sbt")
+          val customIvySbtModule = new is.Module(InlineConfiguration(customBaseModuleID, ModuleInfo(customBaseModuleID.name), extClassifiersModuleDeps).copy(ivyScala = ivyScala))
+          val customUpdateReport = IvyActions.update(customIvySbtModule, c, s.log)
+          val newConfig = customConfig.copy(module = origClassifiersModule.copy(modules = customUpdateReport.allModules))
+          val updateReport = IvyActions.updateClassifiers(is, newConfig, s.log)
+          // process updateReport
           // get all sources
-          val (sources, other) = report.toSeq.partition {
+          val (sources, other) = updateReport.toSeq.partition {
             case (configuration, module, Artifact(name, kind, extension, Some("sources"), configurations, url, extraAttributes), file) => true
             case _ => false
           }
@@ -77,35 +87,7 @@ object Align extends Plugin {
             case (configuration, module, Artifact(name, kind, extension, classifier, configurations, url, extraAttributes), file) =>
               s.log.debug("sbt-source-align: skip align for dependency " + module + " with classifier " + classifier)
           }
-          report
-        }
-    }
-  // update-classifiers with sources align
-  def updateClassifiersAndFixBrokenAlign = (ivySbt, classifiersModule in updateClassifiers, updateConfiguration,
-    ivyScala, target in LocalRootProject, appConfiguration, alignPath, streams) map {
-      (is, mod, c, ivyScala, out, app, path, s) =>
-        withExcludes(out, mod.classifiers, lock(app)) { excludes =>
-          // do default update-sbt-classifiers
-          val report = IvyActions.updateClassifiers(is, GetClassifiersConfiguration(mod, excludes, c, ivyScala), s.log)
-          // process UpdateReport
-          // get all sources
-          val (sources, other) = report.toSeq.partition {
-            case (configuration, module, Artifact(name, kind, extension, Some("sources"), configurations, url, extraAttributes), file) => true
-            case _ => false
-          }
-          // process all jars
-          other.foreach {
-            case (configuration, module, Artifact(name, kind, extension, Some(""), configurations, url, extraAttributes), file) =>
-              sources.find(source => source._1 == configuration && source._2 == module) match {
-                case Some((_, _, _, sourceFile)) =>
-                  align(module.toString, file, sourceFile, path, s)
-                case None =>
-                  s.log.debug("sbt-source-align: skip align for dependency " + module + " - sources not found ")
-              }
-            case (configuration, module, Artifact(name, kind, extension, classifier, configurations, url, extraAttributes), file) =>
-              s.log.debug("sbt-source-align: skip align for dependency " + module + " with classifier " + classifier)
-          }
-          report
+          updateReport
         }
     }
   def align(moduleTag: String, code: File, sources: File, targetDirectory: File, s: TaskStreams): Unit = {

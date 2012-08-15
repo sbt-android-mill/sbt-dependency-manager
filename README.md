@@ -51,19 +51,23 @@ or
     alignPath <<= (baseDirectory) (_ / "my-aling-dir")
 ```
 
-### Align only project dependencies ###
 
-1. Download all project dependencies, sources, javadocs
+You may skip dependencies with _update-align-skip-organization_. If you got something like this
 
-2. Merge code jars with sources
+```
+[trace] Stack trace suppressed: run last *:update-align for the full output.
+[error] (*:update-align) java.lang.IllegalArgumentException: Cannot add dependency 'org.scala-lang#scala-library;2.9.2' to configuration 'provided' of module sbt.android.mill#sbt-android-mill$sbt;0.1-SNAPSHOT because this configuration doesn't exist!
+```
 
-3. Align sources inside jars
+add an exception to alignSkipOrganizationin your _build.sbt_
 
-SBT task name
+``` scala
+    alignSkipOrganization += "org.scala-lang"
+```
 
-    update-align-classifiers
+By default alignSkipOrganization contains "org.scala-lang" and "org.scala-sbt". This setting affects library-dependencies only.
 
-### Align project and SBT dependencies ###
+### Align project dependencies ###
 
 1. Download all project __and SBT__ dependencies, sources, javadocs
 
@@ -73,7 +77,7 @@ SBT task name
 
 SBT task name
 
-    update-align-sbt-classifiers
+    ```update-align```
 
 It is very useful to develop simple-build-tool plugins. Most SBT source code are unaligned. Original sources saved in root directory of jar, but it binded to different packages. This situation prevent source code lookup in most common situations. This is very annoying. SBT _*-sources.jar_ was mostly useless in development before sbt-source-align ;-)
 
