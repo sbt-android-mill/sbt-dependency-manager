@@ -46,23 +46,29 @@ object Align extends Plugin {
   lazy val alignPath = TaskKey[File]("update-align-path")
   lazy val alignSkipOrganization = SettingKey[Seq[String]]("update-align-skip-organization")
   lazy val alignTask = TaskKey[UpdateReport]("update-align")
+  lazy val alignIgnoreConfigurations = SettingKey[Boolean]("update-align-ignore-configurations", "Ignore configurations while lookup, 'test' for example")
   lazy val alignSettings = Seq(
     alignPath <<= (target in LocalRootProject) map { _ / "align" },
     alignSkipOrganization := Seq("org.scala-lang", "org.scala-sbt"),
+    alignIgnoreConfigurations := true,
     alignTask <<= updateClassifiersAndFixBrokenAlign,
     // add empty classifier ""
     transitiveClassifiers in Global :== Seq("", SourceClassifier, DocClassifier))
-  private[this] def restrictedCopy(m: ModuleID, confs: Boolean) =
-    ModuleID(m.organization, m.name, m.revision, crossVersion = m.crossVersion, extraAttributes = m.extraAttributes, configurations = if (confs) m.configurations else None)
 
   // update-sbt-classifiers with sources align
   def updateClassifiersAndFixBrokenAlign = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
-    ivyScala, target in LocalRootProject, appConfiguration, alignPath, libraryDependencies, alignSkipOrganization, streams) map {
-      (is, origClassifiersModule, c, ivyScala, out, app, path, libDeps, skipOrganization, s) =>
+    ivyScala, target in LocalRootProject, appConfiguration, alignPath, libraryDependencies, alignSkipOrganization, alignIgnoreConfigurations, streams) map {
+      (is, origClassifiersModule, c, ivyScala, out, app, path, libDeps, skipOrganization, ignoreConfigurations, s) =>
         withExcludes(out, origClassifiersModule.classifiers, lock(app)) { excludes =>
           import origClassifiersModule.{ id => origClassifiersModuleID, modules => origClassifiersModuleDeps }
           // do default update-sbt-classifiers with libDeps
-          val extClassifiersModuleDeps = origClassifiersModuleDeps ++ libDeps.filter(module => !skipOrganization.exists(_ == module.organization))
+          val extClassifiersModuleDeps = {
+            val result = origClassifiersModuleDeps ++ libDeps.filter(module => !skipOrganization.exists(_ == module.organization))
+            if (ignoreConfigurations)
+              result.map(_.copy(configurations = None))
+            else
+              result
+          }
           val customConfig = GetClassifiersConfiguration(origClassifiersModule, excludes, c, ivyScala)
           val customBaseModuleID = restrictedCopy(origClassifiersModuleID, true).copy(name = origClassifiersModuleID.name + "$sbt")
           val customIvySbtModule = new is.Module(InlineConfiguration(customBaseModuleID, ModuleInfo(customBaseModuleID.name), extClassifiersModuleDeps).copy(ivyScala = ivyScala))
@@ -107,14 +113,20 @@ object Align extends Plugin {
     try {
       jarCode = new JarInputStream(new FileInputStream(code))
       jarSources = new JarInputStream(new FileInputStream(sources))
-      jarTarget = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(target, true)), jarCode.getManifest())
+      jarTarget = try {
+        new JarOutputStream(new BufferedOutputStream(new FileOutputStream(target, true)), jarCode.getManifest())
+      } catch {
+        case e: NullPointerException =>
+          s.log.warn(code + " has broken manifest")
+          new JarOutputStream(new BufferedOutputStream(new FileOutputStream(target, true)))
+      }
       // copy across all entries from the original code jar
       copy(alignEntries, jarCode, jarTarget, s)
       // copy across all entries from the original sources jar
       copy(alignEntries, jarSources, jarTarget, s)
     } catch {
       case e =>
-        s.log.error("sbt-source-align: align " + e.getMessage())
+        s.log.error("sbt-source-align unable to align: " + e.getClass().getName() + " " + e.getMessage())
     } finally {
       if (jarTarget != null) {
         jarTarget.flush()
@@ -206,13 +218,15 @@ object Align extends Plugin {
               }
           } catch {
             case e: ZipException =>
-              s.log.error("sbt-source-align: align " + e.getMessage())
+              s.log.error("sbt-source-align zip failed: " + e.getMessage())
           }
         entry = in.getNextEntry()
       }
     } catch {
       case e =>
-        s.log.error("sbt-source-align: align " + e.getMessage())
+        s.log.error("sbt-source-align copy failed: " + e.getClass().getName() + " " + e.getMessage())
     }
   }
+  private[this] def restrictedCopy(m: ModuleID, confs: Boolean) =
+    ModuleID(m.organization, m.name, m.revision, crossVersion = m.crossVersion, extraAttributes = m.extraAttributes, configurations = if (confs) m.configurations else None)
 }
