@@ -1,5 +1,3 @@
-ScriptedPlugin.scriptedSettings
-
 name := "sbt-source-align"
 
 organization := "sbt.source.align"
