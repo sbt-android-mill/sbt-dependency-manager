@@ -3,9 +3,9 @@ sbt-source-align
 
 simple plugin for simple-build-tool, compose code and source jars, align sources inside for your favorite IDE
 
-If you want improve it, please send mail to sbt-android-mill at digimead.org. You will be added to the group. Please, feel free to add yourself to authors.
+If you want to improve it, please send mail to sbt-android-mill at digimead.org. You will be added to the group. Please, feel free to add yourself to authors.
 
-It is less than 200 lines. SBT source code is really simple to read and simple to extend :-)
+It is less than 300 lines. SBT source code is really simple to read and simple to extend :-)
 
 This readme cover all plugin functionality, even if it is written in broken english (would you have preferred well written russian :-) Please, correct it, if you find something inappropriate.
 
