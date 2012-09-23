@@ -89,6 +89,7 @@ object Align extends Plugin {
                   align(module.toString, file, sourceFile, path, s)
                 case None =>
                   s.log.debug("sbt-source-align: skip align for dependency " + module + " - sources not found ")
+                  sbt.IO.copyFile(file, new File(path, file.getName()), false)
               }
             case (configuration, module, Artifact(name, kind, extension, classifier, configurations, url, extraAttributes), file) =>
               s.log.debug("sbt-source-align: skip align for dependency " + module + " with classifier " + classifier)
