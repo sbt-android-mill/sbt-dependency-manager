@@ -8,4 +8,4 @@ scalacOptions ++= Seq("-unchecked", "-deprecation", "-Xcheckinit")
 
 logLevel := Level.Debug
 
-sbt.source.align.Align.alignSettings
+sbt.source.align.SSA.ssaSettings

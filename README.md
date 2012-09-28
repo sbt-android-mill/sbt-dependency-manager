@@ -23,7 +23,7 @@ file that looks like the following:
     object PluginDef extends Build {
       override def projects = Seq(root)
       lazy val root = Project("plugins", file(".")) dependsOn(ssa)
-      lazy val ssa = uri("git://github.com/sbt-android-mill/sbt-source-align.git#0.1.2")
+      lazy val ssa = uri("git://github.com/sbt-android-mill/sbt-source-align.git#0.2")
     }
 ```
 
@@ -32,7 +32,7 @@ You may find more information about Build.scala at [https://github.com/harrah/xs
 Then in your _build.sbt_ file, simply add:
 
 ``` scala
-    sbt.source.align.Align.alignSettings
+    sbt.source.align.SSA.ssaSettings
 ```
 
 You may find sample project at _src/sbt-test/source-align/simple_
@@ -42,17 +42,17 @@ You may find sample project at _src/sbt-test/source-align/simple_
 By default aligned jars saved to _target/align_ Change _update-align-path_ or add to your project something like
 
 ``` scala
-    alignPath <<= (target in LocalRootProject) map { _ / "my-align-dir" }
+    ssaPath <<= (target in LocalRootProject) map { _ / "my-align-dir" }
 ```
 
 or
 
 ``` scala
-    alignPath <<= (baseDirectory) (_ / "my-aling-dir")
+    ssaPath <<= (baseDirectory) (_ / "my-aling-dir")
 ```
 
 
-You may skip dependencies with _update-align-skip-organization_. If you got something like this
+You may skip dependencies with _ssa-skip-organization_. If you got something like this
 
 ```
 [trace] Stack trace suppressed: run last *:update-align for the full output.
@@ -62,10 +62,10 @@ You may skip dependencies with _update-align-skip-organization_. If you got some
 add an exception to alignSkipOrganizationin your _build.sbt_
 
 ``` scala
-    alignSkipOrganization += "org.scala-lang"
+    ssaSkipOrganization += "org.scala-lang"
 ```
 
-By default alignSkipOrganization contains "org.scala-lang" and "org.scala-sbt". This setting affects library-dependencies only.
+By default ssaSkipOrganization contains "org.scala-lang" and "org.scala-sbt". This setting affects library-dependencies only.
 
 ### Align project dependencies ###
 
@@ -77,9 +77,33 @@ By default alignSkipOrganization contains "org.scala-lang" and "org.scala-sbt". 
 
 SBT task name
 
-    ```update-align```
+```
+> dependency-fetch-align
+```
 
 It is very useful to develop simple-build-tool plugins. Most SBT source code are unaligned. Original sources saved in root directory of jar, but it binded to different packages. This situation prevent source code lookup in most common situations. This is very annoying. SBT _*-sources.jar_ was mostly useless in development before sbt-source-align ;-)
+
+### Fetch project dependencies with sources to '123' directory
+
+```
+> set ssaPath <<= baseDirectory map {(f) => f / "123" }
+> dependency-fetch-with-sources
+```
+ 
+Internals
+---------
+
+### Options ###
+
+* ssa-fetch-path (ssaPath) - Target directory for dependency jars
+* ssa-skip-organization (ssaSkipOrganization) - Ignore dependency jars with paticular sbt.ModuleID
+* ssa-ignore-configurations (ssaIgnoreConfigurations) - Ignore configurations while lookup, 'test' for example
+
+### Tasks ###
+
+* dependency-fetch - Fetch dependency code jars. Save result to target directory
+* dependency-fetch-with-sources - Fetch dependency code and source jars. Save result to target directory
+* dependency-fetch-align - Fetch dependency  code and source jars, merge them. Save result to target directory
 
 Demonstration
 -------------
