@@ -3,6 +3,10 @@ sbt-source-align
 
 simple plugin for simple-build-tool, compose code and source jars, align sources inside for your favorite IDE
 
+* allow fetch __all dependency jars with code (include simple-build-tool itself)__ to target folder
+* allow fetch __all dependency jars with code and sources (include simple-build-tool itself)__ to target folder
+* allow fetch __all dependency jars with code and sources, merge them (include simple-build-tool itself)__ and save to target folder
+
 If you want to improve it, please send mail to sbt-android-mill at digimead.org. You will be added to the group. Please, feel free to add yourself to authors.
 
 It is less than 300 lines. SBT source code is really simple to read and simple to extend :-)
