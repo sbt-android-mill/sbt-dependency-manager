@@ -1,8 +1,8 @@
-name := "sbt-source-align"
+name := "sbt-dependency-manager"
 
-organization := "sbt.source.align"
+organization := "sbt.dependency.manager"
 
-version := "0.2"
+version := "0.3-SNAPSHOT"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-Xcheckinit", "-Xfatal-warnings")
 

@@ -1,5 +1,5 @@
 /**
- * sbt-source-align - merge code and source jars, also align broken scala source files.
+ * sbt-dependency-manager - merge code and source jars, also align broken scala source files.
  * For example, it is allow easy source code lookup for IDE while developing SBT plugins (not only).
  *
  * Copyright (c) 2012, Alexey Aksenov ezh@ezh.msk.ru. All rights reserved.
@@ -22,7 +22,7 @@
  *
  */
 
-package sbt.source.align
+package sbt.dependency.manager
 
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
@@ -42,28 +42,49 @@ import sbt.Defaults._
 import sbt.Keys._
 import sbt._
 
-
-object SSA extends Plugin {
-  lazy val ssaPath = TaskKey[File]("ssa-fetch-path", "Target directory for dependency jars")
-  lazy val ssaSkipOrganization = SettingKey[Seq[String]]("ssa-skip-organization", "Ignore dependency jars with paticular sbt.ModuleID")
-  lazy val ssaTaskFetchAlign = TaskKey[UpdateReport]("dependency-fetch-align", "Fetch dependency  code and source jars, merge them. Save results to target directory")
-  lazy val ssaTaskFetchWithSources = TaskKey[UpdateReport]("dependency-fetch-with-sources", "Fetch dependency code and source jars. Save results to target directory")
-  lazy val ssaTaskFetch = TaskKey[UpdateReport]("dependency-fetch", "Fetch dependency code jars. Save results to target directory")
-  lazy val ssaIgnoreConfigurations = SettingKey[Boolean]("ssa-ignore-configurations", "Ignore configurations while lookup, 'test' for example")
-  lazy val ssaSettings = Seq(
-    ssaPath <<= (target in LocalRootProject) map { _ / "align" },
-    ssaSkipOrganization := Seq("org.scala-lang", "org.scala-sbt"),
-    ssaIgnoreConfigurations := true,
-    ssaTaskFetchAlign <<= ssaTaskFetchAlignTask,
-    ssaTaskFetchWithSources <<= ssaTaskFetchWithSourcesTask,
-    ssaTaskFetch <<= ssaTaskFetchTask,
+/**
+ * sbt-dependency-manager plugin entry
+ */
+object Plugin extends sbt.Plugin {
+  lazy val dependenciesPath = TaskKey[File]("dependency-fetch-path", "Target directory for dependency jars")
+  lazy val dependenciesSkipOrganization = SettingKey[Seq[String]]("dependency-skip-organization", "Ignore dependency jars with paticular sbt.ModuleID")
+  lazy val dependencyTaskFetchAlign = TaskKey[UpdateReport]("dependency-fetch-align", "Fetch dependency  code and source jars, merge them. Save results to target directory")
+  lazy val dependencyTaskFetchWithSources = TaskKey[UpdateReport]("dependency-fetch-with-sources", "Fetch dependency code and source jars. Save results to target directory")
+  lazy val dependencyTaskFetch = TaskKey[UpdateReport]("dependency-fetch", "Fetch dependency code jars. Save results to target directory")
+  lazy val dependencyAddCustom = SettingKey[Boolean]("dependency-add-custom", "Add custom(unknown) libraries to results")
+  lazy val dependencyIgnoreConfigurations = SettingKey[Boolean]("dependency-ignore-configurations", "Ignore configurations while lookup, 'test' for example")
+  lazy val defaultSettings = Seq(
+    dependenciesPath <<= (target in LocalRootProject) map { _ / "align" },
+    dependenciesSkipOrganization := Seq("org.scala-lang", "org.scala-sbt"),
+    dependencyAddCustom := true,
+    dependencyIgnoreConfigurations := true,
+    dependencyTaskFetchAlign <<= dependencyTaskFetchAlignTask,
+    dependencyTaskFetchWithSources <<= dependencyTaskFetchWithSourcesTask,
+    dependencyTaskFetch <<= dependencyTaskFetchTask,
     // add empty classifier ""
     transitiveClassifiers in Global :== Seq("", SourceClassifier, DocClassifier))
 
+  /** entry point for plugin in user's project */
+  def activate = defaultSettings
   // update-sbt-classifiers with sources align
-  def ssaTaskFetchAlignTask = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
-    ivyScala, target in LocalRootProject, appConfiguration, ssaPath, libraryDependencies, ssaSkipOrganization, ssaIgnoreConfigurations, streams) map {
-      (is, origClassifiersModule, c, ivyScala, out, app, path, libDeps, skipOrganization, ignoreConfigurations, s) =>
+  def dependencyTaskFetchAlignTask = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
+    ivyScala, target in LocalRootProject, appConfiguration, dependenciesPath, fullClasspath in Compile, fullClasspath in Test,
+    dependenciesSkipOrganization, dependencyIgnoreConfigurations, dependencyAddCustom, streams) map {
+      (is, origClassifiersModule, c, ivyScala, out, app, path, fullClasspathCompile, fullClasspathTest, skipOrganization, ignoreConfigurations, dependencyAddCustom, s) =>
+        var customLibs = Seq[java.io.File]()
+        val libDeps = (fullClasspathCompile.flatMap(cp => cp.get(moduleID.key) orElse {
+          customLibs = customLibs :+ cp.data
+          None
+        }) ++ fullClasspathTest.flatMap(cp => cp.get(moduleID.key) orElse {
+          customLibs = customLibs :+ cp.data
+          None
+        })).distinct
+        if (dependencyAddCustom)
+          customLibs.filterNot(f => f.isDirectory() || !f.exists).distinct.foreach {
+            lib =>
+              s.log.debug("sbt-dependency-manager: add custom library" + lib)
+              sbt.IO.copyFile(lib, new File(path, lib.getName()), false)
+          }
         commonFetchTask(is, origClassifiersModule, c, ivyScala, out, app, path, libDeps, skipOrganization,
           ignoreConfigurations, s, userFetchAlignFunction)
     }
@@ -75,15 +96,30 @@ object SSA extends Plugin {
         case Some((_, _, _, sourceJar)) =>
           align(module.toString, codeJar, sourceJar, path, s)
         case None =>
-          s.log.debug("sbt-source-align: skip align for dependency " + module + " - sources not found ")
+          s.log.debug("sbt-dependency-manager: skip align for dependency " + module + " - sources not found ")
           sbt.IO.copyFile(codeJar, new File(path, codeJar.getName()), false)
       }
     case (configuration, module, Artifact(name, kind, extension, classifier, configurations, url, extraAttributes), file) =>
-      s.log.debug("sbt-source-align: skip align for dependency " + module + " with classifier " + classifier)
+      s.log.debug("sbt-dependency-manager: skip align for dependency " + module + " with classifier " + classifier)
   }
-  def ssaTaskFetchWithSourcesTask = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
-    ivyScala, target in LocalRootProject, appConfiguration, ssaPath, libraryDependencies, ssaSkipOrganization, ssaIgnoreConfigurations, streams) map {
-      (is, origClassifiersModule, c, ivyScala, out, app, path, libDeps, skipOrganization, ignoreConfigurations, s) =>
+  def dependencyTaskFetchWithSourcesTask = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
+    ivyScala, target in LocalRootProject, appConfiguration, dependenciesPath, fullClasspath in Compile, fullClasspath in Test,
+    dependenciesSkipOrganization, dependencyIgnoreConfigurations, dependencyAddCustom, streams) map {
+      (is, origClassifiersModule, c, ivyScala, out, app, path, fullClasspathCompile, fullClasspathTest, skipOrganization, ignoreConfigurations, dependencyAddCustom, s) =>
+        var customLibs = Seq[java.io.File]()
+        val libDeps = (fullClasspathCompile.flatMap(cp => cp.get(moduleID.key) orElse {
+          customLibs = customLibs :+ cp.data
+          None
+        }) ++ fullClasspathTest.flatMap(cp => cp.get(moduleID.key) orElse {
+          customLibs = customLibs :+ cp.data
+          None
+        })).distinct
+        if (dependencyAddCustom)
+          customLibs.filterNot(f => f.isDirectory() || !f.exists).distinct.foreach {
+            lib =>
+              s.log.debug("sbt-dependency-manager: add custom library" + lib)
+              sbt.IO.copyFile(lib, new File(path, lib.getName()), false)
+          }
         commonFetchTask(is, origClassifiersModule, c, ivyScala, out, app, path, libDeps, skipOrganization,
           ignoreConfigurations, s, userFetchWithSourcesFunction)
     }
@@ -99,11 +135,26 @@ object SSA extends Plugin {
           sbt.IO.copyFile(codeJar, new File(path, codeJar.getName()), false)
       }
     case (configuration, module, Artifact(name, kind, extension, classifier, configurations, url, extraAttributes), file) =>
-      s.log.debug("sbt-source-align: skip align for dependency " + module + " with classifier " + classifier)
+      s.log.debug("sbt-dependency-manager: skip align for dependency " + module + " with classifier " + classifier)
   }
-  def ssaTaskFetchTask = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
-    ivyScala, target in LocalRootProject, appConfiguration, ssaPath, libraryDependencies, ssaSkipOrganization, ssaIgnoreConfigurations, streams) map {
-      (is, origClassifiersModule, c, ivyScala, out, app, path, libDeps, skipOrganization, ignoreConfigurations, s) =>
+  def dependencyTaskFetchTask = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
+    ivyScala, target in LocalRootProject, appConfiguration, dependenciesPath, fullClasspath in Compile, fullClasspath in Test,
+    dependenciesSkipOrganization, dependencyIgnoreConfigurations, dependencyAddCustom, streams) map {
+      (is, origClassifiersModule, c, ivyScala, out, app, path, fullClasspathCompile, fullClasspathTest, skipOrganization, ignoreConfigurations, dependencyAddCustom, s) =>
+        var customLibs = Seq[java.io.File]()
+        val libDeps = (fullClasspathCompile.flatMap(cp => cp.get(moduleID.key) orElse {
+          customLibs = customLibs :+ cp.data
+          None
+        }) ++ fullClasspathTest.flatMap(cp => cp.get(moduleID.key) orElse {
+          customLibs = customLibs :+ cp.data
+          None
+        })).distinct
+        if (dependencyAddCustom)
+          customLibs.filterNot(f => f.isDirectory() || !f.exists).distinct.foreach {
+            lib =>
+              s.log.debug("sbt-dependency-manager: add custom library" + lib)
+              sbt.IO.copyFile(lib, new File(path, lib.getName()), false)
+          }
         commonFetchTask(is, origClassifiersModule, c, ivyScala, out, app, path, libDeps, skipOrganization,
           ignoreConfigurations, s, userFetchFunction)
     }
@@ -118,7 +169,7 @@ object SSA extends Plugin {
           sbt.IO.copyFile(codeJar, new File(path, codeJar.getName()), false)
       }
     case (configuration, module, Artifact(name, kind, extension, classifier, configurations, url, extraAttributes), file) =>
-      s.log.debug("sbt-source-align: skip align for dependency " + module + " with classifier " + classifier)
+      s.log.debug("sbt-dependency-manager: skip align for dependency " + module + " with classifier " + classifier)
   }
   def commonFetchTask(is: sbt.IvySbt,
     origClassifiersModule: sbt.GetClassifiersModule,
@@ -188,7 +239,7 @@ object SSA extends Plugin {
       copy(alignEntries, jarSources, jarTarget, s)
     } catch {
       case e =>
-        s.log.error("sbt-source-align unable to align: " + e.getClass().getName() + " " + e.getMessage())
+        s.log.error("sbt-dependency-manager unable to align: " + e.getClass().getName() + " " + e.getMessage())
     } finally {
       if (jarTarget != null) {
         jarTarget.flush()
@@ -280,13 +331,13 @@ object SSA extends Plugin {
               }
           } catch {
             case e: ZipException =>
-              s.log.error("sbt-source-align zip failed: " + e.getMessage())
+              s.log.error("sbt-dependency-manager zip failed: " + e.getMessage())
           }
         entry = in.getNextEntry()
       }
     } catch {
       case e =>
-        s.log.error("sbt-source-align copy failed: " + e.getClass().getName() + " " + e.getMessage())
+        s.log.error("sbt-dependency-manager copy failed: " + e.getClass().getName() + " " + e.getMessage())
     }
   }
   private[this] def restrictedCopy(m: ModuleID, confs: Boolean) =
