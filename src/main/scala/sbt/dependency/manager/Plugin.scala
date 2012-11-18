@@ -54,7 +54,7 @@ object Plugin extends sbt.Plugin {
   lazy val dependencyAddCustom = SettingKey[Boolean]("dependency-add-custom", "Add custom(unknown) libraries to results")
   lazy val dependencyIgnoreConfigurations = SettingKey[Boolean]("dependency-ignore-configurations", "Ignore configurations while lookup, 'test' for example")
   lazy val defaultSettings = Seq(
-    dependenciesPath <<= (target in LocalRootProject) map { _ / "align" },
+    dependenciesPath <<= (target in LocalRootProject) map { _ / "deps" },
     dependenciesSkipOrganization := Seq("org.scala-lang", "org.scala-sbt"),
     dependencyAddCustom := true,
     dependencyIgnoreConfigurations := true,
