@@ -1,8 +1,8 @@
-name := "sbt-source-align"
+name := "sbt-dependency-manager"
 
-organization := "sbt.source.align"
+organization := "sbt.dependency.manager"
 
-version := "0.1-SNAPSHOT"
+version := "0.3-SNAPSHOT"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-Xcheckinit", "-Xfatal-warnings")
 
@@ -11,7 +11,7 @@ sbtPlugin := true
 
 ScriptedPlugin.scriptedSettings
 
-sbt.source.align.Align.alignSettings
+sbt.dependency.manager.Plugin.activate
 
 scriptedLaunchOpts ++= {
   import scala.collection.JavaConverters._
@@ -22,3 +22,5 @@ scriptedLaunchOpts ++= {
 sourceDirectory <<= (baseDirectory) (_ / ".." / "src")
 
 target <<= (baseDirectory) (_ / ".." / "target")
+
+dependenciesPath <<= (baseDirectory) map (_ / "align")

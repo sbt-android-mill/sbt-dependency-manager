@@ -1,4 +1,6 @@
-resolvers += Resolver.url("typesafe repository for sbt-android-mill", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/ivy-releases/"))(Resolver.defaultIvyPatterns)
+resolvers += Resolver.url("typesafe repository", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/ivy-releases/"))(Resolver.defaultIvyPatterns)
+
+addSbtPlugin("sbt.dependency.manager" % "sbt-dependency-manager" % "0.3-SNAPSHOT")
 
 libraryDependencies <+= (sbtVersion)((v) =>
       v.split('.') match {
