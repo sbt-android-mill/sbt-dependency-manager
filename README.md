@@ -1,5 +1,5 @@
-sbt-source-align
-================
+sbt-dependency-manager
+======================
 
 fetch [SBT](https://github.com/harrah/xsbt "Simple Build Tool") project artifacts, compose jars with source code, align sources inside jars for your favorite IDE
 
@@ -12,6 +12,23 @@ If you want to improve it, please send mail to sbt-android-mill at digimead.org.
 It is less than 400 lines. SBT source code is really simple to read and simple to extend :-)
 
 This readme cover all plugin functionality, even if it is written in broken english (would you have preferred well written russian :-) Please, correct it, if you find something inappropriate.
+
+Table of contents
+-----------------
+
+- [Adding to your project](#adding-to-your-project)
+- [Usage](#usage)
+    - [Fetch all dependencies](#fetch-all-dependencies)
+    - [Filter dependencies](#filter-dependencies)
+    - [Align project dependencies](#align-project-dependencies)
+- [Internals](#internals)
+    - [Options](#options)
+    - [Tasks](#tasks)
+- [Demonstration](#demonstration)
+- [FAQ](#faq)
+- [Authors](#authors)
+- [License](#license)
+- [Copyright](#copyright)
 
 ## Adding to your project ##
 
@@ -27,7 +44,7 @@ file that looks like the following:
     object PluginDef extends Build {
       override def projects = Seq(root)
       lazy val root = Project("plugins", file(".")) dependsOn(dm)
-      lazy val dm = uri("git://github.com/sbt-android-mill/sbt-source-align.git#0.3")
+      lazy val dm = uri("git://github.com/sbt-android-mill/sbt-dependency-manager.git#0.3")
     }
 ```
 
@@ -39,11 +56,11 @@ Then in your _build.sbt_ file, simply add:
     sbt.dependency.manager.Plugin.activate
 ```
 
-You may find sample project at _src/sbt-test/source-align/simple_
+You may find sample project at [src/sbt-test/dependency-manager/simple](https://github.com/sbt-android-mill/sbt-dependency-manager/tree/master/src/sbt-test/dependency-manager/simple)
 
 ## Usage ##
 
-By default aligned jars saved to _target/deps_ Change _dependenciesPath_ or add to your project something like
+By default aligned jars saved to _target/deps_ Change _dependenciesPath_ at your project to something like
 
 ``` scala
     dependenciesPath <<= (target in LocalRootProject) map { _ / "my-align-dir" }
@@ -55,21 +72,26 @@ or
     dependenciesPath <<= (baseDirectory) (_ / "my-aling-dir")
 ```
 
+### Fetch all dependencies
 
-You may skip dependencies with _ssa-skip-organization_. If you got something like this
-
-```
-[trace] Stack trace suppressed: run last *:update-align for the full output.
-[error] (*:update-align) java.lang.IllegalArgumentException: Cannot add dependency 'org.scala-lang#scala-library;2.9.2' to configuration 'provided' of module sbt.android.mill#sbt-android-mill$sbt;0.1-SNAPSHOT because this configuration doesn't exist!
-```
-
-add an exception to alignSkipOrganizationin your _build.sbt_
+By default sbt-dependency-manager skip "org.scala-lang" and "org.scala-sbt". If you need all dependencies do
 
 ``` scala
-    ssaSkipOrganization += "org.scala-lang"
+    dependencyFilter := Seq()
 ```
 
-By default ssaSkipOrganization contains "org.scala-lang" and "org.scala-sbt". This setting affects library-dependencies only.
+### Filter dependencies
+
+``` scala
+    dependencyFilter <<= (dependencyClasspathNarrow) map { cp =>
+      val filter1 = moduleFilter(organization = "org.scala-lang")
+      val filter2 = moduleFilter(organization = "org.other")
+      val filter3 = moduleFilter(organization = "com.blabla")
+      Some(cp.flatMap(_.get(moduleID.key)).filterNot(filter1).filterNot(filter2).filterNot(filter3))
+    },
+````
+
+More about module filters look at [SBT Wiki](https://github.com/harrah/xsbt/wiki/Update-Report)
 
 ### Align project dependencies ###
 
@@ -85,12 +107,12 @@ SBT task name
 > dependency-fetch-align
 ```
 
-It is very useful to develop simple-build-tool plugins. Most SBT source code are unaligned. Original sources saved in root directory of jar, but it binded to different packages. This situation prevent source code lookup in most common situations. This is very annoying. SBT _*-sources.jar_ was mostly useless in development before sbt-source-align ;-)
+It is very useful to develop simple-build-tool plugins. Most SBT source code are unaligned. Original sources saved in root directory of jar, but it binded to different packages. This situation prevent source code lookup in most common situations. This is very annoying. SBT _*-sources.jar_ was mostly useless in development before sbt-dependenc-manager ;-)
 
 ### Fetch project dependencies with sources to '123' directory
 
 ```
-> set ssaPath <<= baseDirectory map {(f) => f / "123" }
+> set dependencyPath <<= baseDirectory map {(f) => f / "123" }
 > dependency-fetch-with-sources
 ```
  
@@ -132,6 +154,16 @@ Developing simple SBT plugin in Eclipse IDE with
 
 _PS sbt-dependency-manager obsoletes capabilities provided by sbt deliver-local + IvyDE or sbteclipse plugin_
 
+FAQ
+---
+
+* I want to fetch artifacts, but SBT try to compile broken code. Process aborted with compilation error.
+
+```scala
+    sbt> set dependencyClasspathNarrow <<= dependencyClasspath in Compile
+    sbt> set dependencyClasspathWideTask <<= fullClasspath in Compile
+```
+
 Authors
 -------
 
@@ -140,7 +172,7 @@ Authors
 License
 -------
 
-The sbt-source-align is licensed to you under the terms of
+The sbt-dependency-manager is licensed to you under the terms of
 the Apache License, version 2.0, a copy of which has been
 included in the LICENSE file.
 
