@@ -22,4 +22,4 @@ sourceDirectory <<= (baseDirectory) (_ / ".." / "src")
 
 target <<= (baseDirectory) (_ / ".." / "target")
 
-dependenciesPath <<= (baseDirectory) map (_ / "align")
+dependencyPath <<= (baseDirectory) map (_ / "deps")
