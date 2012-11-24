@@ -2,10 +2,10 @@ name := "Simple"
 
 version := "0.1"
 
-scalaVersion := "2.8.2"
-
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-Xcheckinit")
 
 logLevel := Level.Debug
 
-sbt.source.align.SSA.ssaSettings
+sbt.dependency.manager.Plugin.activate
+
+libraryDependencies += "org.slf4j" % "slf4j-api" % "1.7.1"

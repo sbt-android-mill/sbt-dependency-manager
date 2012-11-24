@@ -2,12 +2,11 @@ name := "sbt-dependency-manager"
 
 organization := "sbt.dependency.manager"
 
-version := "0.3-SNAPSHOT"
+version := "0.3"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-Xcheckinit", "-Xfatal-warnings")
 
 sbtPlugin := true
-
 
 ScriptedPlugin.scriptedSettings
 
@@ -23,4 +22,4 @@ sourceDirectory <<= (baseDirectory) (_ / ".." / "src")
 
 target <<= (baseDirectory) (_ / ".." / "target")
 
-dependenciesPath <<= (baseDirectory) map (_ / "align")
+dependencyPath <<= (baseDirectory) map (_ / "deps")
