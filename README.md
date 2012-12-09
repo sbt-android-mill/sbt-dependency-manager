@@ -161,7 +161,7 @@ FAQ
 
 ```scala
     sbt> set dependencyClasspathNarrow <<= dependencyClasspath in Compile
-    sbt> set dependencyClasspathWideTask <<= fullClasspath in Compile
+    sbt> set dependencyClasspathWide <<= dependencyClasspath in Compile
 ```
 
 Authors
