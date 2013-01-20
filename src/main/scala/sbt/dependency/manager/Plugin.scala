@@ -2,7 +2,7 @@
  * sbt-dependency-manager - fetch and merge byte code and source code jars, align broken sources within jars.
  * For example, it is allow easy source code lookup for IDE while developing SBT plugins (not only).
  *
- * Copyright (c) 2012 Alexey Aksenov ezh@ezh.msk.ru
+ * Copyright (c) 2012-2013 Alexey Aksenov ezh@ezh.msk.ru
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,7 @@ import sbt._
 object Plugin extends sbt.Plugin {
   lazy val dependencyPath = TaskKey[File]("dependency-path", "Target directory for dependency jars")
   lazy val dependencyFilter = TaskKey[Option[Seq[ModuleID]]]("dependency-filter", "Processing dependencies only with particular sbt.ModuleID")
+  lazy val dependencyJarResourcesFilter = SettingKey[Seq[String]]("dependency-jar-resources-filter", "Regular expressions for filtered resources")
   lazy val dependencyClasspathNarrow = TaskKey[Classpath]("dependency-classpath-narrow", "Union of dependencyClasspath from Compile and Test configurations")
   lazy val dependencyClasspathWide = TaskKey[Classpath]("dependency-classpath-wide", "Union of fullClasspath from Compile and Test configurations")
   lazy val dependencyTaskFetchAlign = TaskKey[UpdateReport]("dependency-fetch-align", "Fetch dependency code and source jars, merge them. Save results to target directory")
@@ -56,6 +57,7 @@ object Plugin extends sbt.Plugin {
       val filter = moduleFilter(organization = "org.scala-lang")
       Some(cp.flatMap(_.get(moduleID.key)).filterNot(filter))
     },
+    dependencyJarResourcesFilter := Seq("META-INF/.*\\.SF", "META-INF/.*\\.DSA", "META-INF/.*\\.RSA"),
     dependencyClasspathNarrow <<= dependencyClasspathNarrowTask,
     dependencyClasspathWide <<= dependencyClasspathWideTask,
     dependencyAddCustom <<= dependencyAddCustomTask,
@@ -71,11 +73,11 @@ object Plugin extends sbt.Plugin {
   /**
    * Task that return union of dependencyClasspath in Compile and Test configurations
    */
-  def dependencyClasspathNarrowTask = (dependencyClasspath in Compile, dependencyClasspath in Test) map ((cpA, cpB) => (cpA ++ cpB).distinct)
+  def dependencyClasspathNarrowTask = (externalDependencyClasspath in Compile, externalDependencyClasspath in Test) map ((cpA, cpB) => (cpA ++ cpB).distinct)
   /**
    * Task that return union of fullClasspath in Compile and Test configurations
    */
-  def dependencyClasspathWideTask = (fullClasspath in Compile, fullClasspath in Test) map ((cpA, cpB) => (cpA ++ cpB).distinct)
+  def dependencyClasspathWideTask = (externalDependencyClasspath in Compile, externalDependencyClasspath in Test) map ((cpA, cpB) => (cpA ++ cpB).distinct)
   /**
    * Task that fetch custom libraries without ModuleID to dependencyPath
    * Jar files in unmanagement classpath is one of such libraries
@@ -95,18 +97,18 @@ object Plugin extends sbt.Plugin {
   // update-sbt-classifiers with sources align
   def dependencyTaskFetchAlignTask = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
     ivyScala, target in LocalRootProject, appConfiguration, dependencyPath, dependencyAddCustom,
-    dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, streams) map {
-      (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, s) =>
+    dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, dependencyJarResourcesFilter, streams) map {
+      (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, resourceFilter, s) =>
         commonFetchTask(is, origClassifiersModule, c, ivyScala, out, app, path, fullClasspath, filter,
-          ignoreConfigurations, s, dependencyAddCustom, userFetchAlignFunction)
+          ignoreConfigurations, resourceFilter, s, dependencyAddCustom, userFetchAlignFunction)
     }
   def userFetchAlignFunction(sources: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
     other: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
-    path: File, s: TaskStreams): Unit = other.foreach {
+    path: File, resourceFilter: Seq[String], s: TaskStreams): Unit = other.foreach {
     case (configuration, module, Artifact(name, kind, extension, Some(""), configurations, url, extraAttributes), codeJar) =>
       sources.find(source => source._1 == configuration && source._2 == module) match {
         case Some((_, _, _, sourceJar)) =>
-          align(module.toString, codeJar, sourceJar, path, s)
+          align(module.toString, codeJar, sourceJar, path, resourceFilter, s)
         case None =>
           s.log.debug("sbt-dependency-manager: skip align for dependency " + module + " - sources not found ")
           sbt.IO.copyFile(codeJar, new File(path, codeJar.getName()), false)
@@ -116,14 +118,14 @@ object Plugin extends sbt.Plugin {
   }
   def dependencyTaskFetchWithSourcesTask = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
     ivyScala, target in LocalRootProject, appConfiguration, dependencyPath, dependencyAddCustom,
-    dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, streams) map {
-      (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, s) =>
+    dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, dependencyJarResourcesFilter, streams) map {
+      (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, resourceFilter, s) =>
         commonFetchTask(is, origClassifiersModule, c, ivyScala, out, app, path, fullClasspath, filter,
-          ignoreConfigurations, s, dependencyAddCustom, userFetchWithSourcesFunction)
+          ignoreConfigurations, resourceFilter, s, dependencyAddCustom, userFetchWithSourcesFunction)
     }
   def userFetchWithSourcesFunction(sources: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
     other: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
-    path: File, s: TaskStreams): Unit = other.foreach {
+    path: File, resourceFilter: Seq[String], s: TaskStreams): Unit = other.foreach {
     case (configuration, module, Artifact(name, kind, extension, Some(""), configurations, url, extraAttributes), codeJar) =>
       sources.find(source => source._1 == configuration && source._2 == module) match {
         case Some((_, _, _, sourceJar)) =>
@@ -137,14 +139,14 @@ object Plugin extends sbt.Plugin {
   }
   def dependencyTaskFetchTask = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
     ivyScala, target in LocalRootProject, appConfiguration, dependencyPath, dependencyAddCustom,
-    dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, streams) map {
-      (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, s) =>
+    dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, dependencyJarResourcesFilter, streams) map {
+      (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, resourceFilter, s) =>
         commonFetchTask(is, origClassifiersModule, c, ivyScala, out, app, path, fullClasspath, filter,
-          ignoreConfigurations, s, dependencyAddCustom, userFetchFunction)
+          ignoreConfigurations, resourceFilter, s, dependencyAddCustom, userFetchFunction)
     }
   def userFetchFunction(sources: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
     other: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
-    path: File, s: TaskStreams): Unit = other.foreach {
+    path: File, resourceFilter: Seq[String], s: TaskStreams): Unit = other.foreach {
     case (configuration, module, Artifact(name, kind, extension, Some(""), configurations, url, extraAttributes), codeJar) =>
       sources.find(source => source._1 == configuration && source._2 == module) match {
         case Some((_, _, _, sourceJar)) =>
@@ -165,9 +167,10 @@ object Plugin extends sbt.Plugin {
     fullClasspath: Classpath,
     filter: Option[Seq[ModuleID]],
     ignoreConfigurations: Boolean,
+    resourceFilter: Seq[String],
     s: TaskStreams,
     dependencyAddCustom: Boolean,
-    userFunction: (Seq[(String, sbt.ModuleID, sbt.Artifact, File)], Seq[(String, sbt.ModuleID, sbt.Artifact, File)], File, TaskStreams) => Unit) =
+    userFunction: (Seq[(String, sbt.ModuleID, sbt.Artifact, File)], Seq[(String, sbt.ModuleID, sbt.Artifact, File)], File, Seq[String], TaskStreams) => Unit) =
     withExcludes(out, origClassifiersModule.classifiers, lock(app)) { excludes =>
       import origClassifiersModule.{ id => origClassifiersModuleID, modules => origClassifiersModuleDeps }
       // do default update-sbt-classifiers with libDeps
@@ -195,7 +198,7 @@ object Plugin extends sbt.Plugin {
         case _ => false
       }
       // process all jars
-      userFunction(sources, other, path, s)
+      userFunction(sources, other, path, resourceFilter, s)
       // add unprocessed modules
       if (dependencyAddCustom) {
         val unprocessed = extClassifiersModuleDeps.filterNot(other.map(_._2).contains).distinct
@@ -207,7 +210,7 @@ object Plugin extends sbt.Plugin {
       }
       updateReport
     }
-  def align(moduleTag: String, code: File, sources: File, targetDirectory: File, s: TaskStreams): Unit = {
+  def align(moduleTag: String, code: File, sources: File, targetDirectory: File, resourceFilter: Seq[String], s: TaskStreams): Unit = {
     val alignEntries = new HashSet[String]()
     if (!targetDirectory.exists())
       if (!targetDirectory.mkdirs())
@@ -232,9 +235,9 @@ object Plugin extends sbt.Plugin {
           new JarOutputStream(new BufferedOutputStream(new FileOutputStream(target, true)))
       }
       // copy across all entries from the original code jar
-      copy(alignEntries, jarCode, jarTarget, s)
+      copy(alignEntries, jarCode, jarTarget, resourceFilter, s)
       // copy across all entries from the original sources jar
-      copy(alignEntries, jarSources, jarTarget, s)
+      copy(alignEntries, jarSources, jarTarget, resourceFilter, s)
     } catch {
       case e =>
         s.log.error("sbt-dependency-manager unable to align: " + e.getClass().getName() + " " + e.getMessage())
@@ -294,7 +297,7 @@ object Plugin extends sbt.Plugin {
           None
     }
   }
-  private def copy(alignEntries: HashSet[String], in: JarInputStream, out: JarOutputStream, s: TaskStreams) {
+  private def copy(alignEntries: HashSet[String], in: JarInputStream, out: JarOutputStream, resourceFilter: Seq[String], s: TaskStreams) {
     var entry: ZipEntry = null
     // copy across all entries from the original code jar
     var value: Int = 0
@@ -304,7 +307,9 @@ object Plugin extends sbt.Plugin {
       while (entry != null) {
         if (alignEntries(entry.getName))
           s.log.debug("skip, entry already in jar: " + entry.getName())
-        else
+        else if (resourceFilter.find(entry.getName().matches).nonEmpty) {
+          s.log.debug("skip, filtered " + entry)
+        } else
           try {
             alignEntries(entry.getName) = true
             val bos = new ByteArrayOutputStream()
