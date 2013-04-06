@@ -42,8 +42,9 @@ import sbt._
  */
 object Plugin extends sbt.Plugin {
   lazy val dependencyPath = TaskKey[File]("dependency-path", "Target directory for dependency jars")
-  lazy val dependencyFilter = TaskKey[Option[Seq[ModuleID]]]("dependency-filter", "Processing dependencies only with particular sbt.ModuleID")
+  lazy val dependencyFilter = TaskKey[Option[ModuleFilter]]("dependency-filter", "Processing dependencies only with particular sbt.ModuleID")
   lazy val dependencyJarResourcesFilter = SettingKey[Seq[String]]("dependency-jar-resources-filter", "Regular expressions for filtered resources")
+  lazy val dependencyClasspathFilter = TaskKey[ModuleFilter]("dependency-classpath-filter", "Filter that accept all dependency modules")
   lazy val dependencyClasspathNarrow = TaskKey[Classpath]("dependency-classpath-narrow", "Union of dependencyClasspath from Compile and Test configurations")
   lazy val dependencyClasspathWide = TaskKey[Classpath]("dependency-classpath-wide", "Union of fullClasspath from Compile and Test configurations")
   lazy val dependencyTaskFetchAlign = TaskKey[UpdateReport]("dependency-fetch-align", "Fetch dependency code and source jars, merge them. Save results to target directory")
@@ -53,11 +54,11 @@ object Plugin extends sbt.Plugin {
   lazy val dependencyIgnoreConfigurations = SettingKey[Boolean]("dependency-ignore-configurations", "Ignore configurations while lookup, 'test' for example")
   lazy val defaultSettings = Seq(
     dependencyPath <<= (target in LocalRootProject) map { _ / "deps" },
-    dependencyFilter <<= (dependencyClasspathNarrow) map { cp =>
-      val filter = moduleFilter(organization = "org.scala-lang")
-      Some(cp.flatMap(_.get(moduleID.key)).filterNot(filter))
-    },
+    dependencyFilter <<= dependencyClasspathFilter map (dcf => Some(dcf - moduleFilter(organization = GlobFilter("org.scala-lang")))),
     dependencyJarResourcesFilter := Seq("META-INF/.*\\.SF", "META-INF/.*\\.DSA", "META-INF/.*\\.RSA"),
+    dependencyClasspathFilter <<= (dependencyClasspathNarrowTask) map (cp =>
+      cp.flatMap(_.get(moduleID.key)).foldLeft(moduleFilter(NothingFilter, NothingFilter, NothingFilter))((acc, m) => acc |
+        moduleFilter(GlobFilter(m.organization), GlobFilter(m.name), GlobFilter(m.revision)))),
     dependencyClasspathNarrow <<= dependencyClasspathNarrowTask,
     dependencyClasspathWide <<= dependencyClasspathWideTask,
     dependencyAddCustom <<= dependencyAddCustomTask,
@@ -73,11 +74,13 @@ object Plugin extends sbt.Plugin {
   /**
    * Task that return union of dependencyClasspath in Compile and Test configurations
    */
-  def dependencyClasspathNarrowTask = (externalDependencyClasspath in Compile, externalDependencyClasspath in Test) map ((cpA, cpB) => (cpA ++ cpB).distinct)
+  def dependencyClasspathNarrowTask =
+    (externalDependencyClasspath in Compile, externalDependencyClasspath in Test) map ((cpA, cpB) => (cpA ++ cpB).distinct)
   /**
    * Task that return union of fullClasspath in Compile and Test configurations
    */
-  def dependencyClasspathWideTask = (externalDependencyClasspath in Compile, externalDependencyClasspath in Test) map ((cpA, cpB) => (cpA ++ cpB).distinct)
+  def dependencyClasspathWideTask =
+    (externalDependencyClasspath in Compile, externalDependencyClasspath in Test) map ((cpA, cpB) => (cpA ++ cpB).distinct)
   /**
    * Task that fetch custom libraries without ModuleID to dependencyPath
    * Jar files in unmanagement classpath is one of such libraries
@@ -99,7 +102,7 @@ object Plugin extends sbt.Plugin {
     ivyScala, target in LocalRootProject, appConfiguration, dependencyPath, dependencyAddCustom,
     dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, dependencyJarResourcesFilter, streams) map {
       (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, resourceFilter, s) =>
-        commonFetchTask(is, origClassifiersModule, c, ivyScala, out, app, path, fullClasspath, filter,
+        commonFetchTask(is, origClassifiersModule, new UpdateConfiguration(c.retrieve, true, UpdateLogging.Full), ivyScala, out, app, path, fullClasspath, filter,
           ignoreConfigurations, resourceFilter, s, dependencyAddCustom, userFetchAlignFunction)
     }
   def userFetchAlignFunction(sources: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
@@ -120,7 +123,7 @@ object Plugin extends sbt.Plugin {
     ivyScala, target in LocalRootProject, appConfiguration, dependencyPath, dependencyAddCustom,
     dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, dependencyJarResourcesFilter, streams) map {
       (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, resourceFilter, s) =>
-        commonFetchTask(is, origClassifiersModule, c, ivyScala, out, app, path, fullClasspath, filter,
+        commonFetchTask(is, origClassifiersModule, new UpdateConfiguration(c.retrieve, true, UpdateLogging.Full), ivyScala, out, app, path, fullClasspath, filter,
           ignoreConfigurations, resourceFilter, s, dependencyAddCustom, userFetchWithSourcesFunction)
     }
   def userFetchWithSourcesFunction(sources: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
@@ -141,7 +144,7 @@ object Plugin extends sbt.Plugin {
     ivyScala, target in LocalRootProject, appConfiguration, dependencyPath, dependencyAddCustom,
     dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, dependencyJarResourcesFilter, streams) map {
       (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, resourceFilter, s) =>
-        commonFetchTask(is, origClassifiersModule, c, ivyScala, out, app, path, fullClasspath, filter,
+        commonFetchTask(is, origClassifiersModule, new UpdateConfiguration(c.retrieve, true, UpdateLogging.Full), ivyScala, out, app, path, fullClasspath, filter,
           ignoreConfigurations, resourceFilter, s, dependencyAddCustom, userFetchFunction)
     }
   def userFetchFunction(sources: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
@@ -165,7 +168,7 @@ object Plugin extends sbt.Plugin {
     app: xsbti.AppConfiguration,
     path: File,
     fullClasspath: Classpath,
-    filter: Option[Seq[ModuleID]],
+    filter: Option[ModuleFilter],
     ignoreConfigurations: Boolean,
     resourceFilter: Seq[String],
     s: TaskStreams,
@@ -177,7 +180,7 @@ object Plugin extends sbt.Plugin {
       val libDeps = fullClasspath.flatMap(_.get(moduleID.key))
       val extClassifiersModuleDeps = {
         val result = filter match {
-          case Some(filter) => (origClassifiersModuleDeps ++ libDeps).filter(filter.contains)
+          case Some(filter) => (origClassifiersModuleDeps ++ libDeps).filter(filter)
           case None => (origClassifiersModuleDeps ++ libDeps)
         }
         if (ignoreConfigurations)
@@ -239,7 +242,7 @@ object Plugin extends sbt.Plugin {
       // copy across all entries from the original sources jar
       copy(alignEntries, jarSources, jarTarget, resourceFilter, s)
     } catch {
-      case e =>
+      case e: Throwable =>
         s.log.error("sbt-dependency-manager unable to align: " + e.getClass().getName() + " " + e.getMessage())
     } finally {
       if (jarTarget != null) {
@@ -339,7 +342,7 @@ object Plugin extends sbt.Plugin {
         entry = in.getNextEntry()
       }
     } catch {
-      case e =>
+      case e: Throwable =>
         s.log.error("sbt-dependency-manager copy failed: " + e.getClass().getName() + " " + e.getMessage())
     }
   }
