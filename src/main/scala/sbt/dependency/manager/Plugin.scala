@@ -100,9 +100,9 @@ object Plugin extends sbt.Plugin {
   // update-sbt-classifiers with sources align
   def dependencyTaskFetchAlignTask = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
     ivyScala, target in LocalRootProject, appConfiguration, dependencyPath, dependencyAddCustom,
-    dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, dependencyJarResourcesFilter, streams) map {
-      (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, resourceFilter, s) =>
-        commonFetchTask(is, origClassifiersModule, new UpdateConfiguration(c.retrieve, true, UpdateLogging.Full), ivyScala, out, app, path, fullClasspath, filter,
+    dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, dependencyJarResourcesFilter, ivyLoggingLevel, streams) map {
+      (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, resourceFilter, ivyLogging, s) =>
+        commonFetchTask(is, origClassifiersModule, new UpdateConfiguration(c.retrieve, true, ivyLogging), ivyScala, out, app, path, fullClasspath, filter,
           ignoreConfigurations, resourceFilter, s, dependencyAddCustom, userFetchAlignFunction)
     }
   def userFetchAlignFunction(sources: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
@@ -121,9 +121,9 @@ object Plugin extends sbt.Plugin {
   }
   def dependencyTaskFetchWithSourcesTask = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
     ivyScala, target in LocalRootProject, appConfiguration, dependencyPath, dependencyAddCustom,
-    dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, dependencyJarResourcesFilter, streams) map {
-      (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, resourceFilter, s) =>
-        commonFetchTask(is, origClassifiersModule, new UpdateConfiguration(c.retrieve, true, UpdateLogging.Full), ivyScala, out, app, path, fullClasspath, filter,
+    dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, dependencyJarResourcesFilter, ivyLoggingLevel, streams) map {
+      (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, resourceFilter, ivyLogging, s) =>
+        commonFetchTask(is, origClassifiersModule, new UpdateConfiguration(c.retrieve, true, ivyLogging), ivyScala, out, app, path, fullClasspath, filter,
           ignoreConfigurations, resourceFilter, s, dependencyAddCustom, userFetchWithSourcesFunction)
     }
   def userFetchWithSourcesFunction(sources: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
@@ -142,9 +142,9 @@ object Plugin extends sbt.Plugin {
   }
   def dependencyTaskFetchTask = (ivySbt, classifiersModule in updateSbtClassifiers, updateConfiguration,
     ivyScala, target in LocalRootProject, appConfiguration, dependencyPath, dependencyAddCustom,
-    dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, dependencyJarResourcesFilter, streams) map {
-      (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, resourceFilter, s) =>
-        commonFetchTask(is, origClassifiersModule, new UpdateConfiguration(c.retrieve, true, UpdateLogging.Full), ivyScala, out, app, path, fullClasspath, filter,
+    dependencyFilter, dependencyIgnoreConfigurations, dependencyClasspathWide, dependencyJarResourcesFilter, ivyLoggingLevel, streams) map {
+      (is, origClassifiersModule, c, ivyScala, out, app, path, dependencyAddCustom, filter, ignoreConfigurations, fullClasspath, resourceFilter, ivyLogging, s) =>
+        commonFetchTask(is, origClassifiersModule, new UpdateConfiguration(c.retrieve, true, ivyLogging), ivyScala, out, app, path, fullClasspath, filter,
           ignoreConfigurations, resourceFilter, s, dependencyAddCustom, userFetchFunction)
     }
   def userFetchFunction(sources: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
