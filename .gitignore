@@ -8,7 +8,7 @@ lib_managed/
 src_managed/
 project/boot/
 project/plugins/project/
-project-dev/align/
+project-dev/
 
 # Scala-IDE specific
 .scala_dependencies
