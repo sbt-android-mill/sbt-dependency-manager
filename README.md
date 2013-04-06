@@ -3,9 +3,9 @@ sbt-dependency-manager
 
 fetch [SBT](https://github.com/harrah/xsbt "Simple Build Tool") project artifacts, compose jars with source code, align sources inside jars for your favorite IDE
 
-* allow fetch __all dependency jars (include simple-build-tool itself)__ to target folder
-* allow fetch __all dependency jars with sources (include simple-build-tool itself)__ to target folder
-* allow fetch __all dependency jars with sources, merge them (include simple-build-tool itself)__ and save to target folder
+* allow fetch __all dependency jars (include sbt-dependency-manager itself)__ to target folder
+* allow fetch __all dependency jars with sources (include sbt-dependency-manager itself)__ to target folder
+* allow fetch __all dependency jars with sources, merge them (include sbt-dependency-manager itself)__ and save to target folder
 
 If you want to improve it, please send mail to sbt-android-mill at digimead.org. You will be added to the group. Please, feel free to add yourself to authors.
 
