@@ -79,6 +79,7 @@ object Plugin extends sbt.Plugin {
 
   /** Entry point for plugin in user's project */
   def activate = defaultSettings
+  /** Implementation of dependency-bundle */
   def dependencyTaskBundleTask = (classifiersModule in updateSbtClassifiers, dependencyBundlePath, dependencyPath,
     dependencyFilter, dependencyLookupClasspath, ivySbt, state, streams, thisProjectRef) map {
       (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
@@ -106,6 +107,7 @@ object Plugin extends sbt.Plugin {
         }
         result.get
     }
+  /** Implementation of dependency-bundle-with-artifact */
   def dependencyTaskBundleWithArtifactTask = (classifiersModule in updateSbtClassifiers, dependencyBundlePath, dependencyPath,
     dependencyFilter, dependencyLookupClasspath, ivySbt, packageBin in Compile, state, streams, thisProjectRef) map {
       (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
@@ -133,6 +135,7 @@ object Plugin extends sbt.Plugin {
         }
         result.get
     }
+  /** Implementation of dependency-fetch-align */
   def dependencyTaskFetchAlignTask = (classifiersModule in updateSbtClassifiers, dependencyBundlePath, dependencyPath,
     dependencyFilter, dependencyLookupClasspath, ivySbt, state, streams, thisProjectRef) map {
       (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
@@ -160,6 +163,7 @@ object Plugin extends sbt.Plugin {
         }
         result.get
     }
+  /** Implementation of dependency-fetch-with-sources */
   def dependencyTaskFetchWithSourcesTask = (classifiersModule in updateSbtClassifiers, dependencyBundlePath, dependencyPath,
     dependencyFilter, dependencyLookupClasspath, ivySbt, state, streams, thisProjectRef) map {
       (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
@@ -187,6 +191,7 @@ object Plugin extends sbt.Plugin {
         }
         result.get
     }
+  /** Implementation of dependency-fetch */
   def dependencyTaskFetchTask = (classifiersModule in updateSbtClassifiers, dependencyBundlePath, dependencyPath,
     dependencyFilter, dependencyLookupClasspath, ivySbt, state, streams, thisProjectRef) map {
       (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
@@ -226,6 +231,7 @@ object Plugin extends sbt.Plugin {
   def resourceFilter(entry: ZipEntry): Boolean =
     Seq("META-INF/.*\\.SF", "META-INF/.*\\.DSA", "META-INF/.*\\.RSA").find(entry.getName().toUpperCase().matches).nonEmpty
 
+  /** Repack sequence of jar artifacts */
   protected def align(moduleTag: String, code: File, sources: File, targetDirectory: File, resourceFilter: ZipEntry => Boolean, s: TaskStreams,
     alignEntries: HashSet[String] = HashSet[String](), output: JarOutputStream = null): Unit = {
     if (!targetDirectory.exists())
@@ -280,6 +286,7 @@ object Plugin extends sbt.Plugin {
         jarSources.close()
     }
   }
+  /** Common part of all sbt-dependency-manager tasks */
   protected def commonFetchTask(arg: TaskArgument, userFunction: (TaskArgument, Seq[(String, sbt.ModuleID, sbt.Artifact, File)], Seq[(String, sbt.ModuleID, sbt.Artifact, File)]) => Unit): UpdateReport =
     synchronized {
       withExcludes(arg.pathTarget, arg.origClassifiersModule.classifiers, lock(arg.appConfiguration)) { excludes =>
@@ -386,6 +393,7 @@ object Plugin extends sbt.Plugin {
         updateReport
       }
     }
+  /** Specific part for tasks dependency-fetch-align, dependency-bundle, dependency-bundle-with-artifact */
   protected def doFetchAlign(arg: TaskArgument, sources: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
     other: Seq[(String, sbt.ModuleID, sbt.Artifact, File)]): Unit = other.foreach {
     case (configuration, module, Artifact(name, kind, extension, Some(""), configurations, url, extraAttributes), codeJar) =>
@@ -417,6 +425,7 @@ object Plugin extends sbt.Plugin {
     case (configuration, module, Artifact(name, kind, extension, classifier, configurations, url, extraAttributes), file) =>
       arg.streams.log.debug("sbt-dependency-manager: skip align for dependency " + module + " with classifier " + classifier)
   }
+  /** Specific part for task dependency-fetch-with-sources */
   protected def doFetchWithSources(arg: TaskArgument, sources: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
     other: Seq[(String, sbt.ModuleID, sbt.Artifact, File)]): Unit = other.foreach {
     case (configuration, module, Artifact(name, kind, extension, Some(""), configurations, url, extraAttributes), codeJar) =>
@@ -430,6 +439,7 @@ object Plugin extends sbt.Plugin {
     case (configuration, module, Artifact(name, kind, extension, classifier, configurations, url, extraAttributes), file) =>
       arg.streams.log.debug("sbt-dependency-manager: skip align for dependency " + module + " with classifier " + classifier)
   }
+  /** Specific part for task dependency-fetch */
   protected def doFetch(arg: TaskArgument, sources: Seq[(String, sbt.ModuleID, sbt.Artifact, File)],
     other: Seq[(String, sbt.ModuleID, sbt.Artifact, File)]): Unit = other.foreach {
     case (configuration, module, Artifact(name, kind, extension, Some(""), configurations, url, extraAttributes), codeJar) =>
@@ -443,6 +453,7 @@ object Plugin extends sbt.Plugin {
       arg.streams.log.debug("sbt-dependency-manager: skip align for dependency " + module + " with classifier " + classifier)
   }
 
+  /** Repack jar artifact content */
   private def alignScalaSource(alignEntries: HashSet[String], entry: ZipEntry, content: String, s: TaskStreams): Option[ZipEntry] = {
     val searchFor = "/" + entry.getName.takeWhile(_ != '.')
     val distance = alignEntries.toSeq.map(path => (path.indexOf(searchFor), path)).filter(_._1 > 1).sortBy(_._1).headOption
@@ -488,6 +499,7 @@ object Plugin extends sbt.Plugin {
           None
     }
   }
+  /** Copy jar artifact content */
   private def copy(alignEntries: HashSet[String], in: JarInputStream, out: JarOutputStream, resourceFilter: ZipEntry => Boolean, s: TaskStreams) {
     var entry: ZipEntry = null
     // copy across all entries from the original code jar
@@ -537,6 +549,7 @@ object Plugin extends sbt.Plugin {
   private[this] def restrictedCopy(m: ModuleID, confs: Boolean) =
     ModuleID(m.organization, m.name, m.revision, crossVersion = m.crossVersion, extraAttributes = m.extraAttributes, configurations = if (confs) m.configurations else None)
 
+  /** Consolidated argument with all required information */
   case class TaskArgument(
     /** Application configuration that provides information about SBT process */
     appConfiguration: AppConfiguration,
@@ -550,9 +563,9 @@ object Plugin extends sbt.Plugin {
     origClassifiersModule: GetClassifiersModule,
     /** Update configuration */
     updateConfiguration: UpdateConfiguration,
-    /** Bundle path */
+    /** Bundle path with jar name */
     pathBundle: java.io.File,
-    /** Fetched artifacts path */
+    /** Path to Fetched artifacts */
     pathDependency: java.io.File,
     /** Target path */
     pathTarget: java.io.File,
