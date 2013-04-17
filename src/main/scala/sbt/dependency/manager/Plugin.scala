@@ -220,7 +220,7 @@ object Plugin extends sbt.Plugin {
         result.get
     }
   /**
-   * Task that return union of fullClasspath in Compile and Test configurations
+   * Task that returns the union of fullClasspath in Compile and Test configurations
    */
   def dependencyLookupClasspathTask =
     (externalDependencyClasspath in Compile, externalDependencyClasspath in Test) map ((cpA, cpB) => (cpA ++ cpB).distinct)
@@ -286,7 +286,7 @@ object Plugin extends sbt.Plugin {
         jarSources.close()
     }
   }
-  /** Common part of all sbt-dependency-manager tasks */
+  /** Common part for all sbt-dependency-manager tasks */
   protected def commonFetchTask(arg: TaskArgument, userFunction: (TaskArgument, Seq[(String, sbt.ModuleID, sbt.Artifact, File)], Seq[(String, sbt.ModuleID, sbt.Artifact, File)]) => Unit): UpdateReport =
     synchronized {
       withExcludes(arg.pathTarget, arg.origClassifiersModule.classifiers, lock(arg.appConfiguration)) { excludes =>
@@ -453,7 +453,7 @@ object Plugin extends sbt.Plugin {
       arg.streams.log.debug("sbt-dependency-manager: skip align for dependency " + module + " with classifier " + classifier)
   }
 
-  /** Repack jar artifact content */
+  /** Repack content of jar artifact */
   private def alignScalaSource(alignEntries: HashSet[String], entry: ZipEntry, content: String, s: TaskStreams): Option[ZipEntry] = {
     val searchFor = "/" + entry.getName.takeWhile(_ != '.')
     val distance = alignEntries.toSeq.map(path => (path.indexOf(searchFor), path)).filter(_._1 > 1).sortBy(_._1).headOption
@@ -499,7 +499,7 @@ object Plugin extends sbt.Plugin {
           None
     }
   }
-  /** Copy jar artifact content */
+  /** Copy content of jar artifact */
   private def copy(alignEntries: HashSet[String], in: JarInputStream, out: JarOutputStream, resourceFilter: ZipEntry => Boolean, s: TaskStreams) {
     var entry: ZipEntry = null
     // copy across all entries from the original code jar
