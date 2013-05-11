@@ -359,7 +359,7 @@ object Plugin extends sbt.Plugin {
                 val originalModuleID = arg.libraryDependencies.find(id =>
                   id.name == moduleId.name && id.organization == moduleId.organization && id.revision == moduleId.revision &&
                     id.explicitArtifacts.nonEmpty && id.explicitArtifacts.forall(_.url.map(_.getProtocol()) == Some("file")))
-                Some(originalModuleID getOrElse moduleId)
+                Some(originalModuleID getOrElse moduleId.name % moduleId.organization % moduleId.revision from classpath.data.toURI().toURL().toString)
               } else
                 None // already processed
             case None =>
