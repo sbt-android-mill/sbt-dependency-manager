@@ -74,12 +74,12 @@ object Plugin extends sbt.Plugin {
       ivySbt, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
         val extracted: Extracted = Project.extract(state)
         val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
-        streams.log.info(logPrefix(thisProjectRef.project) + "Fetch dependencies and align to bundle")
+        val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
+        streams.log.info(logPrefix(name) + "Fetch dependencies and align to bundle")
         val result = for {
           appConfiguration <- appConfiguration in thisScope get extracted.structure.data
           ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
           ivyScala <- ivyScala in thisScope get extracted.structure.data
-          name <- name in thisScope get extracted.structure.data
           pathTarget <- target in thisScope get extracted.structure.data
           updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
           dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
@@ -106,12 +106,12 @@ object Plugin extends sbt.Plugin {
       ivySbt, packageBin, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
         val extracted: Extracted = Project.extract(state)
         val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
-        streams.log.info(logPrefix(thisProjectRef.project) + "Fetch dependencies with artifact and align to bundle")
+        val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
+        streams.log.info(logPrefix(name) + "Fetch dependencies with artifact and align to bundle")
         val result = for {
           appConfiguration <- appConfiguration in thisScope get extracted.structure.data
           ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
           ivyScala <- ivyScala in thisScope get extracted.structure.data
-          name <- name in thisScope get extracted.structure.data
           pathTarget <- target in thisScope get extracted.structure.data
           updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
           dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
@@ -137,12 +137,12 @@ object Plugin extends sbt.Plugin {
       ivySbt, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
         val extracted: Extracted = Project.extract(state)
         val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
-        streams.log.info(logPrefix(thisProjectRef.project) + "Fetch dependencies and align")
+        val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
+        streams.log.info(logPrefix(name) + "Fetch dependencies and align")
         val result = for {
           appConfiguration <- appConfiguration in thisScope get extracted.structure.data
           ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
           ivyScala <- ivyScala in thisScope get extracted.structure.data
-          name <- name in thisScope get extracted.structure.data
           pathTarget <- target in thisScope get extracted.structure.data
           updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
           dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
@@ -168,12 +168,12 @@ object Plugin extends sbt.Plugin {
       ivySbt, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
         val extracted: Extracted = Project.extract(state)
         val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
-        streams.log.info(logPrefix(thisProjectRef.project) + "Fetch dependencies with source code")
+        val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
+        streams.log.info(logPrefix(name) + "Fetch dependencies with source code")
         val result = for {
           appConfiguration <- appConfiguration in thisScope get extracted.structure.data
           ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
           ivyScala <- ivyScala in thisScope get extracted.structure.data
-          name <- name in thisScope get extracted.structure.data
           pathTarget <- target in thisScope get extracted.structure.data
           updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
           dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
@@ -199,12 +199,12 @@ object Plugin extends sbt.Plugin {
       ivySbt, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
         val extracted: Extracted = Project.extract(state)
         val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
-        streams.log.info(logPrefix(thisProjectRef.project) + "Fetch dependencies")
+        val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
+        streams.log.info(logPrefix(name) + "Fetch dependencies")
         val result = for {
           appConfiguration <- appConfiguration in thisScope get extracted.structure.data
           ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
           ivyScala <- ivyScala in thisScope get extracted.structure.data
-          name <- name in thisScope get extracted.structure.data
           pathTarget <- target in thisScope get extracted.structure.data
           updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
           dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
