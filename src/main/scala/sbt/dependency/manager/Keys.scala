@@ -25,15 +25,17 @@ import sbt._
 import sbt.Keys._
 
 object Keys {
-  lazy val dependencyAddCustom = SettingKey[Boolean]("dependency-add-custom", "Add custom(unknown) libraries to results")
-  lazy val dependencyBundlePath = TaskKey[File]("dependency-bundle-path", "Bundle jar location")
-  lazy val dependencyClasspathFilter = TaskKey[ModuleFilter]("dependency-classpath-filter", "Filter that accept all dependency modules")
-  lazy val dependencyFilter = TaskKey[Option[ModuleFilter]]("dependency-filter", "Processing dependencies only with particular sbt.ModuleID")
-  lazy val dependencyIgnoreConfiguration = SettingKey[Boolean]("dependency-ignore-configurations", "Ignore configurations while lookup, 'test' for example")
-  lazy val dependencyLookupClasspath = TaskKey[Classpath]("dependency-lookup-classpath", "Classpath that is used for building the dependency sequence")
-  lazy val dependencyPath = TaskKey[File]("dependency-path", "Target directory for dependency jars")
-  lazy val dependencyResourceFilter = SettingKey[ZipEntry => Boolean]("dependency-resource-filter", "Fuction for filtering jar content")
-  lazy val dependencySkipResolved = SettingKey[Boolean]("dependency-skip-resoled", "Skip resolved dependencies with explicit artifacts which points to local resources")
+  def DependencyConf = config("dependency-manager") extend (Compile)
+
+  lazy val dependencyEnableCustom = SettingKey[Boolean]("enable-custom-libraries", "Add custom(unknown) libraries to results")
+  lazy val dependencyBundlePath = TaskKey[File]("bundle-path", "Bundle jar location")
+  lazy val dependencyClasspathFilter = TaskKey[ModuleFilter]("predefined-classpath-filter", "Predefined filter that accept all modules in project classpath")
+  lazy val dependencyFilter = TaskKey[Option[ModuleFilter]]("filter", "Filtering dependencies with particular sbt.ModuleID")
+  lazy val dependencyIgnoreConfiguration = SettingKey[Boolean]("ignore-configurations", "Ignore configurations while lookup like 'test', for example")
+  lazy val dependencyLookupClasspath = TaskKey[Classpath]("lookup-classpath", "Classpath that is used for building the dependency sequence")
+  lazy val dependencyPath = TaskKey[File]("path", "Target directory for fetched jars")
+  lazy val dependencyResourceFilter = SettingKey[ZipEntry => Boolean]("resource-filter", "Fuction for filtering jar content")
+  lazy val dependencySkipResolved = SettingKey[Boolean]("skip-resolved", "Skip resolved dependencies with explicit artifacts which points to local resources")
   lazy val dependencyTaskBundle = TaskKey[UpdateReport]("dependency-bundle", "Fetch dependency code and source jars. Save results to bundle")
   lazy val dependencyTaskBundleWithArtifact = TaskKey[UpdateReport]("dependency-bundle-with-artifact", "Fetch dependency code and source jars, add project artefact. Save results to bundle")
   lazy val dependencyTaskFetch = TaskKey[UpdateReport]("dependency-fetch", "Fetch dependency code jars. Save results to target directory")
