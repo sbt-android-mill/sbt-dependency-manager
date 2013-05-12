@@ -67,161 +67,176 @@ object Plugin extends sbt.Plugin {
       dependencyTaskFetchWithSources <<= dependencyTaskFetchWithSourcesTask)
 
   /** Implementation of dependency-bundle */
-  def dependencyTaskBundleTask = (classifiersModule in updateSbtClassifiers, dependencyBundlePath in DependencyConf,
-    dependencyPath in DependencyConf, dependencyFilter in DependencyConf, dependencyLookupClasspath in DependencyConf,
-    ivySbt, libraryDependencies in Compile, libraryDependencies in Test, state, streams, thisProjectRef) map {
-      (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
-      ivySbt, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
-        val extracted: Extracted = Project.extract(state)
-        val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
-        val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
-        streams.log.info(logPrefix(name) + "Fetch dependencies and align to bundle")
-        val result = for {
-          appConfiguration <- appConfiguration in thisScope get extracted.structure.data
-          ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
-          ivyScala <- ivyScala in thisScope get extracted.structure.data
-          pathTarget <- target in thisScope get extracted.structure.data
-          updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
-          dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
-          dependencyIgnoreConfiguration <- dependencyIgnoreConfiguration in thisScope get extracted.structure.data
-          dependencyResourceFilter <- dependencyResourceFilter in thisScope get extracted.structure.data
-          dependencySkipResolved <- dependencySkipResolved in thisScope get extracted.structure.data
-        } yield {
-          val libraryDependencies = (libraryDependenciesCompile ++ libraryDependenciesTest).distinct
-          val argument = TaskArgument(appConfiguration, ivyLoggingLevel, ivySbt, ivyScala, libraryDependencies, name,
-            origClassifiersModule, new UpdateConfiguration(updateConfiguration.retrieve, true, ivyLoggingLevel),
-            pathBundle, pathDependency, pathTarget, streams,
-            dependencyEnableCustom, None, true, dependencyClasspath,
-            dependencyFilter, dependencyIgnoreConfiguration, dependencyResourceFilter, dependencySkipResolved)
-          commonFetchTask(argument, doFetchWithSources)
-        }
-        result.get
-    }
+  def dependencyTaskBundleTask: Project.Initialize[Task[Unit]] =
+    (classifiersModule in updateSbtClassifiers, dependencyBundlePath in DependencyConf,
+      dependencyPath in DependencyConf, dependencyFilter in DependencyConf, dependencyLookupClasspath in DependencyConf,
+      ivySbt, libraryDependencies in Compile, libraryDependencies in Test, state, streams, thisProjectRef) map {
+        (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
+        ivySbt, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
+          val extracted: Extracted = Project.extract(state)
+          val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
+          if ((dependencyEnable in thisScope get extracted.structure.data) getOrElse true) {
+            val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
+            streams.log.info(logPrefix(name) + "Fetch dependencies and align to bundle")
+            val result = for {
+              appConfiguration <- appConfiguration in thisScope get extracted.structure.data
+              ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
+              ivyScala <- ivyScala in thisScope get extracted.structure.data
+              pathTarget <- target in thisScope get extracted.structure.data
+              updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
+              dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
+              dependencyIgnoreConfiguration <- dependencyIgnoreConfiguration in thisScope get extracted.structure.data
+              dependencyResourceFilter <- dependencyResourceFilter in thisScope get extracted.structure.data
+              dependencySkipResolved <- dependencySkipResolved in thisScope get extracted.structure.data
+            } yield {
+              val libraryDependencies = (libraryDependenciesCompile ++ libraryDependenciesTest).distinct
+              val argument = TaskArgument(appConfiguration, ivyLoggingLevel, ivySbt, ivyScala, libraryDependencies, name,
+                origClassifiersModule, new UpdateConfiguration(updateConfiguration.retrieve, true, ivyLoggingLevel),
+                pathBundle, pathDependency, pathTarget, streams,
+                dependencyEnableCustom, None, true, dependencyClasspath,
+                dependencyFilter, dependencyIgnoreConfiguration, dependencyResourceFilter, dependencySkipResolved)
+              commonFetchTask(argument, doFetchWithSources)
+            }
+            result.get
+          }
+      }
   /** Implementation of dependency-bundle-with-artifact */
-  def dependencyTaskBundleWithArtifactTask = (classifiersModule in updateSbtClassifiers, dependencyBundlePath in DependencyConf,
-    dependencyPath in DependencyConf, dependencyFilter in DependencyConf, dependencyLookupClasspath in DependencyConf,
-    ivySbt, packageBin in Compile, libraryDependencies in Compile,
-    libraryDependencies in Test, state, streams, thisProjectRef) map {
-      (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
-      ivySbt, packageBin, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
-        val extracted: Extracted = Project.extract(state)
-        val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
-        val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
-        streams.log.info(logPrefix(name) + "Fetch dependencies with artifact and align to bundle")
-        val result = for {
-          appConfiguration <- appConfiguration in thisScope get extracted.structure.data
-          ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
-          ivyScala <- ivyScala in thisScope get extracted.structure.data
-          pathTarget <- target in thisScope get extracted.structure.data
-          updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
-          dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
-          dependencyIgnoreConfiguration <- dependencyIgnoreConfiguration in thisScope get extracted.structure.data
-          dependencyResourceFilter <- dependencyResourceFilter in thisScope get extracted.structure.data
-          dependencySkipResolved <- dependencySkipResolved in thisScope get extracted.structure.data
-        } yield {
-          val libraryDependencies = (libraryDependenciesCompile ++ libraryDependenciesTest).distinct
-          val argument = TaskArgument(appConfiguration, ivyLoggingLevel, ivySbt, ivyScala, libraryDependencies, name,
-            origClassifiersModule, new UpdateConfiguration(updateConfiguration.retrieve, true, ivyLoggingLevel),
-            pathBundle, pathDependency, pathTarget, streams,
-            dependencyEnableCustom, Some(packageBin), true, dependencyClasspath,
-            dependencyFilter, dependencyIgnoreConfiguration, dependencyResourceFilter, dependencySkipResolved)
-          commonFetchTask(argument, doFetchWithSources)
-        }
-        result.get
-    }
+  def dependencyTaskBundleWithArtifactTask: Project.Initialize[Task[Unit]] =
+    (classifiersModule in updateSbtClassifiers, dependencyBundlePath in DependencyConf,
+      dependencyPath in DependencyConf, dependencyFilter in DependencyConf, dependencyLookupClasspath in DependencyConf,
+      ivySbt, packageBin in Compile, libraryDependencies in Compile,
+      libraryDependencies in Test, state, streams, thisProjectRef) map {
+        (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
+        ivySbt, packageBin, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
+          val extracted: Extracted = Project.extract(state)
+          val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
+          if ((dependencyEnable in thisScope get extracted.structure.data) getOrElse true) {
+            val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
+            streams.log.info(logPrefix(name) + "Fetch dependencies with artifact and align to bundle")
+            val result = for {
+              appConfiguration <- appConfiguration in thisScope get extracted.structure.data
+              ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
+              ivyScala <- ivyScala in thisScope get extracted.structure.data
+              pathTarget <- target in thisScope get extracted.structure.data
+              updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
+              dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
+              dependencyIgnoreConfiguration <- dependencyIgnoreConfiguration in thisScope get extracted.structure.data
+              dependencyResourceFilter <- dependencyResourceFilter in thisScope get extracted.structure.data
+              dependencySkipResolved <- dependencySkipResolved in thisScope get extracted.structure.data
+            } yield {
+              val libraryDependencies = (libraryDependenciesCompile ++ libraryDependenciesTest).distinct
+              val argument = TaskArgument(appConfiguration, ivyLoggingLevel, ivySbt, ivyScala, libraryDependencies, name,
+                origClassifiersModule, new UpdateConfiguration(updateConfiguration.retrieve, true, ivyLoggingLevel),
+                pathBundle, pathDependency, pathTarget, streams,
+                dependencyEnableCustom, Some(packageBin), true, dependencyClasspath,
+                dependencyFilter, dependencyIgnoreConfiguration, dependencyResourceFilter, dependencySkipResolved)
+              commonFetchTask(argument, doFetchWithSources)
+            }
+            result.get
+          }
+      }
   /** Implementation of dependency-fetch-align */
-  def dependencyTaskFetchAlignTask = (classifiersModule in updateSbtClassifiers, dependencyBundlePath in DependencyConf,
-    dependencyPath in DependencyConf, dependencyFilter in DependencyConf, dependencyLookupClasspath in DependencyConf,
-    ivySbt, libraryDependencies in Compile, libraryDependencies in Test, state, streams, thisProjectRef) map {
-      (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
-      ivySbt, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
-        val extracted: Extracted = Project.extract(state)
-        val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
-        val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
-        streams.log.info(logPrefix(name) + "Fetch dependencies and align")
-        val result = for {
-          appConfiguration <- appConfiguration in thisScope get extracted.structure.data
-          ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
-          ivyScala <- ivyScala in thisScope get extracted.structure.data
-          pathTarget <- target in thisScope get extracted.structure.data
-          updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
-          dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
-          dependencyIgnoreConfiguration <- dependencyIgnoreConfiguration in thisScope get extracted.structure.data
-          dependencyResourceFilter <- dependencyResourceFilter in thisScope get extracted.structure.data
-          dependencySkipResolved <- dependencySkipResolved in thisScope get extracted.structure.data
-        } yield {
-          val libraryDependencies = (libraryDependenciesCompile ++ libraryDependenciesTest).distinct
-          val argument = TaskArgument(appConfiguration, ivyLoggingLevel, ivySbt, ivyScala, libraryDependencies, name,
-            origClassifiersModule, new UpdateConfiguration(updateConfiguration.retrieve, true, ivyLoggingLevel),
-            pathBundle, pathDependency, pathTarget, streams,
-            dependencyEnableCustom, None, false, dependencyClasspath,
-            dependencyFilter, dependencyIgnoreConfiguration, dependencyResourceFilter, dependencySkipResolved)
-          commonFetchTask(argument, doFetchAlign)
-        }
-        result.get
-    }
+  def dependencyTaskFetchAlignTask: Project.Initialize[Task[Unit]] =
+    (classifiersModule in updateSbtClassifiers, dependencyBundlePath in DependencyConf,
+      dependencyPath in DependencyConf, dependencyFilter in DependencyConf, dependencyLookupClasspath in DependencyConf,
+      ivySbt, libraryDependencies in Compile, libraryDependencies in Test, state, streams, thisProjectRef) map {
+        (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
+        ivySbt, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
+          val extracted: Extracted = Project.extract(state)
+          val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
+          if ((dependencyEnable in thisScope get extracted.structure.data) getOrElse true) {
+            val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
+            streams.log.info(logPrefix(name) + "Fetch dependencies and align")
+            val result = for {
+              appConfiguration <- appConfiguration in thisScope get extracted.structure.data
+              ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
+              ivyScala <- ivyScala in thisScope get extracted.structure.data
+              pathTarget <- target in thisScope get extracted.structure.data
+              updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
+              dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
+              dependencyIgnoreConfiguration <- dependencyIgnoreConfiguration in thisScope get extracted.structure.data
+              dependencyResourceFilter <- dependencyResourceFilter in thisScope get extracted.structure.data
+              dependencySkipResolved <- dependencySkipResolved in thisScope get extracted.structure.data
+            } yield {
+              val libraryDependencies = (libraryDependenciesCompile ++ libraryDependenciesTest).distinct
+              val argument = TaskArgument(appConfiguration, ivyLoggingLevel, ivySbt, ivyScala, libraryDependencies, name,
+                origClassifiersModule, new UpdateConfiguration(updateConfiguration.retrieve, true, ivyLoggingLevel),
+                pathBundle, pathDependency, pathTarget, streams,
+                dependencyEnableCustom, None, false, dependencyClasspath,
+                dependencyFilter, dependencyIgnoreConfiguration, dependencyResourceFilter, dependencySkipResolved)
+              commonFetchTask(argument, doFetchAlign)
+            }
+            result.get
+          }
+      }
   /** Implementation of dependency-fetch-with-sources */
-  def dependencyTaskFetchWithSourcesTask = (classifiersModule in updateSbtClassifiers, dependencyBundlePath in DependencyConf,
-    dependencyPath in DependencyConf, dependencyFilter in DependencyConf, dependencyLookupClasspath in DependencyConf,
-    ivySbt, libraryDependencies in Compile, libraryDependencies in Test, state, streams, thisProjectRef) map {
-      (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
-      ivySbt, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
-        val extracted: Extracted = Project.extract(state)
-        val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
-        val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
-        streams.log.info(logPrefix(name) + "Fetch dependencies with source code")
-        val result = for {
-          appConfiguration <- appConfiguration in thisScope get extracted.structure.data
-          ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
-          ivyScala <- ivyScala in thisScope get extracted.structure.data
-          pathTarget <- target in thisScope get extracted.structure.data
-          updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
-          dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
-          dependencyIgnoreConfiguration <- dependencyIgnoreConfiguration in thisScope get extracted.structure.data
-          dependencyResourceFilter <- dependencyResourceFilter in thisScope get extracted.structure.data
-          dependencySkipResolved <- dependencySkipResolved in thisScope get extracted.structure.data
-        } yield {
-          val libraryDependencies = (libraryDependenciesCompile ++ libraryDependenciesTest).distinct
-          val argument = TaskArgument(appConfiguration, ivyLoggingLevel, ivySbt, ivyScala, libraryDependencies, name,
-            origClassifiersModule, new UpdateConfiguration(updateConfiguration.retrieve, true, ivyLoggingLevel),
-            pathBundle, pathDependency, pathTarget, streams,
-            dependencyEnableCustom, None, false, dependencyClasspath,
-            dependencyFilter, dependencyIgnoreConfiguration, dependencyResourceFilter, dependencySkipResolved)
-          commonFetchTask(argument, doFetchWithSources)
-        }
-        result.get
-    }
+  def dependencyTaskFetchWithSourcesTask: Project.Initialize[Task[Unit]] =
+    (classifiersModule in updateSbtClassifiers, dependencyBundlePath in DependencyConf,
+      dependencyPath in DependencyConf, dependencyFilter in DependencyConf, dependencyLookupClasspath in DependencyConf,
+      ivySbt, libraryDependencies in Compile, libraryDependencies in Test, state, streams, thisProjectRef) map {
+        (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
+        ivySbt, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
+          val extracted: Extracted = Project.extract(state)
+          val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
+          if ((dependencyEnable in thisScope get extracted.structure.data) getOrElse true) {
+            val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
+            streams.log.info(logPrefix(name) + "Fetch dependencies with source code")
+            val result = for {
+              appConfiguration <- appConfiguration in thisScope get extracted.structure.data
+              ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
+              ivyScala <- ivyScala in thisScope get extracted.structure.data
+              pathTarget <- target in thisScope get extracted.structure.data
+              updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
+              dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
+              dependencyIgnoreConfiguration <- dependencyIgnoreConfiguration in thisScope get extracted.structure.data
+              dependencyResourceFilter <- dependencyResourceFilter in thisScope get extracted.structure.data
+              dependencySkipResolved <- dependencySkipResolved in thisScope get extracted.structure.data
+            } yield {
+              val libraryDependencies = (libraryDependenciesCompile ++ libraryDependenciesTest).distinct
+              val argument = TaskArgument(appConfiguration, ivyLoggingLevel, ivySbt, ivyScala, libraryDependencies, name,
+                origClassifiersModule, new UpdateConfiguration(updateConfiguration.retrieve, true, ivyLoggingLevel),
+                pathBundle, pathDependency, pathTarget, streams,
+                dependencyEnableCustom, None, false, dependencyClasspath,
+                dependencyFilter, dependencyIgnoreConfiguration, dependencyResourceFilter, dependencySkipResolved)
+              commonFetchTask(argument, doFetchWithSources)
+            }
+            result.get
+          }
+      }
   /** Implementation of dependency-fetch */
-  def dependencyTaskFetchTask = (classifiersModule in updateSbtClassifiers, dependencyBundlePath in DependencyConf,
-    dependencyPath in DependencyConf, dependencyFilter in DependencyConf, dependencyLookupClasspath in DependencyConf,
-    ivySbt, libraryDependencies in Compile, libraryDependencies in Test, state, streams, thisProjectRef) map {
-      (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
-      ivySbt, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
-        val extracted: Extracted = Project.extract(state)
-        val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
-        val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
-        streams.log.info(logPrefix(name) + "Fetch dependencies")
-        val result = for {
-          appConfiguration <- appConfiguration in thisScope get extracted.structure.data
-          ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
-          ivyScala <- ivyScala in thisScope get extracted.structure.data
-          pathTarget <- target in thisScope get extracted.structure.data
-          updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
-          dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
-          dependencyIgnoreConfiguration <- dependencyIgnoreConfiguration in thisScope get extracted.structure.data
-          dependencyResourceFilter <- dependencyResourceFilter in thisScope get extracted.structure.data
-          dependencySkipResolved <- dependencySkipResolved in thisScope get extracted.structure.data
-        } yield {
-          val libraryDependencies = (libraryDependenciesCompile ++ libraryDependenciesTest).distinct
-          val argument = TaskArgument(appConfiguration, ivyLoggingLevel, ivySbt, ivyScala, libraryDependencies, name,
-            origClassifiersModule, new UpdateConfiguration(updateConfiguration.retrieve, true, ivyLoggingLevel),
-            pathBundle, pathDependency, pathTarget, streams,
-            dependencyEnableCustom, None, false, dependencyClasspath,
-            dependencyFilter, dependencyIgnoreConfiguration, dependencyResourceFilter, dependencySkipResolved)
-          commonFetchTask(argument, doFetch)
-        }
-        result.get
-    }
+  def dependencyTaskFetchTask: Project.Initialize[Task[Unit]] =
+    (classifiersModule in updateSbtClassifiers, dependencyBundlePath in DependencyConf,
+      dependencyPath in DependencyConf, dependencyFilter in DependencyConf, dependencyLookupClasspath in DependencyConf,
+      ivySbt, libraryDependencies in Compile, libraryDependencies in Test, state, streams, thisProjectRef) map {
+        (origClassifiersModule, pathBundle, pathDependency, dependencyFilter, dependencyClasspath,
+        ivySbt, libraryDependenciesCompile, libraryDependenciesTest, state, streams, thisProjectRef) =>
+          val extracted: Extracted = Project.extract(state)
+          val thisScope = Load.projectScope(thisProjectRef).copy(config = Select(DependencyConf))
+          if ((dependencyEnable in thisScope get extracted.structure.data) getOrElse true) {
+            val name = (sbt.Keys.name in thisScope get extracted.structure.data) getOrElse thisProjectRef.project
+            streams.log.info(logPrefix(name) + "Fetch dependencies")
+            val result = for {
+              appConfiguration <- appConfiguration in thisScope get extracted.structure.data
+              ivyLoggingLevel <- ivyLoggingLevel in thisScope get extracted.structure.data
+              ivyScala <- ivyScala in thisScope get extracted.structure.data
+              pathTarget <- target in thisScope get extracted.structure.data
+              updateConfiguration <- updateConfiguration in thisScope get extracted.structure.data
+              dependencyEnableCustom <- dependencyEnableCustom in thisScope get extracted.structure.data
+              dependencyIgnoreConfiguration <- dependencyIgnoreConfiguration in thisScope get extracted.structure.data
+              dependencyResourceFilter <- dependencyResourceFilter in thisScope get extracted.structure.data
+              dependencySkipResolved <- dependencySkipResolved in thisScope get extracted.structure.data
+            } yield {
+              val libraryDependencies = (libraryDependenciesCompile ++ libraryDependenciesTest).distinct
+              val argument = TaskArgument(appConfiguration, ivyLoggingLevel, ivySbt, ivyScala, libraryDependencies, name,
+                origClassifiersModule, new UpdateConfiguration(updateConfiguration.retrieve, true, ivyLoggingLevel),
+                pathBundle, pathDependency, pathTarget, streams,
+                dependencyEnableCustom, None, false, dependencyClasspath,
+                dependencyFilter, dependencyIgnoreConfiguration, dependencyResourceFilter, dependencySkipResolved)
+              commonFetchTask(argument, doFetch)
+            }
+            result.get
+          }
+      }
   /**
    * Task that returns the union of fullClasspath in Compile and Test configurations
    */
