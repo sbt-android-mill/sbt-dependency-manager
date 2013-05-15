@@ -9,7 +9,7 @@ fetch [SBT](https://github.com/harrah/xsbt "Simple Build Tool") project artifact
 
 If you want to improve it, please send mail to sbt-android-mill at digimead.org. You will be added to the group. Please, feel free to add yourself to authors.
 
-It is less than 400 lines. SBT source code is really simple to read and simple to extend :-)
+SBT source code is really simple to read and simple to extend :-)
 
 This readme cover all plugin functionality, even if it is written in broken english (would you have preferred well written russian :-) Please, correct it, if you find something inappropriate.
 
@@ -179,4 +179,4 @@ included in the LICENSE file.
 Copyright
 ---------
 
-Copyright © 2012 Alexey B. Aksenov/Ezh. All rights reserved.
+Copyright © 2012-2013 Alexey B. Aksenov/Ezh. All rights reserved.
