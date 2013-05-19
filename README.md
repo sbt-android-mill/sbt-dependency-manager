@@ -1,7 +1,10 @@
 sbt-dependency-manager
 ======================
+[![Build Status](https://travis-ci.org/sbt-android-mill/sbt-dependency-manager.png?branch=master)](https://travis-ci.org/sbt-android-mill/sbt-dependency-manager)
 
-fetch [SBT](https://github.com/harrah/xsbt "Simple Build Tool") project artifacts, compose jars with source code, align sources inside jars for your favorite IDE
+Short introduction: [Simple-build-tool plugin with Eclipse in 5 Minutes](http://youtu.be/3K8knvkVAyc) on Youtube (demo of one of the first versions) or [look at the test project](https://github.com/sbt-android-mill/sbt-dependency-manager/tree/master/src/sbt-test/dependency-manager/simple). Please, open `test` file
+
+What is it? You may fetch [SBT](https://github.com/sbt/sbt "Simple Build Tool") project artifacts, compose jars with source code, align sources inside jars for your favorite IDE
 
 * allow fetch __all dependency jars (include sbt-dependency-manager itself)__ to target folder
 * allow fetch __all dependency jars with sources (include sbt-dependency-manager itself)__ to target folder
@@ -44,7 +47,7 @@ file that looks like the following:
     object PluginDef extends Build {
       override def projects = Seq(root)
       lazy val root = Project("plugins", file(".")) dependsOn(dm)
-      lazy val dm = uri("git://github.com/sbt-android-mill/sbt-dependency-manager.git#0.4")
+      lazy val dm = uri("git://github.com/sbt-android-mill/sbt-dependency-manager.git#0.6.1")
     }
 ```
 
