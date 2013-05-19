@@ -6,9 +6,10 @@ Short introduction: [Simple-build-tool plugin with Eclipse in 5 Minutes](http://
 
 What is it? You may fetch [SBT](https://github.com/sbt/sbt "Simple Build Tool") project artifacts, compose jars with source code, align sources inside jars for your favorite IDE
 
-* allow fetch __all dependency jars (include sbt-dependency-manager itself)__ to target folder
-* allow fetch __all dependency jars with sources (include sbt-dependency-manager itself)__ to target folder
-* allow fetch __all dependency jars with sources, merge them (include sbt-dependency-manager itself)__ and save to target folder
+It is provide an ability:
+* to fetch __all dependency jars (include sbt-dependency-manager itself)__ to target folder
+* to fetch __all dependency jars with sources (include sbt-dependency-manager itself)__ to target folder
+* to fetch __all dependency jars with sources, merge them (include sbt-dependency-manager itself)__ and save to target folder
 
 If you want to improve it, please send mail to sbt-android-mill at digimead.org. You will be added to the group. Please, feel free to add yourself to authors.
 
