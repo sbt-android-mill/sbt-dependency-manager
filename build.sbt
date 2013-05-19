@@ -31,4 +31,6 @@ sbtPlugin := true
 
 scriptedBufferLog := false
 
+scriptedLaunchOpts := Seq("-Xms512m", "-Xmx512m", "-XX:MaxPermSize=256m")
+
 //logLevel := Level.Debug
