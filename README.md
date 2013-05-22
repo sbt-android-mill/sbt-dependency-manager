@@ -62,6 +62,10 @@ Then in your _build.sbt_ file, simply add:
 
 You may find sample project at [src/sbt-test/dependency-manager/simple](https://github.com/sbt-android-mill/sbt-dependency-manager/tree/master/src/sbt-test/dependency-manager/simple)
 
+    resolvers += Resolver.url("digimead-ivy", url("http://storage.googleapis.com/ivy.repository.digimead.org/"))(Resolver.defaultIvyPatterns)
+
+    resolvers += "digimead-maven" at "http://storage.googleapis.com/maven.repository.digimead.org/"
+
 ## Usage ##
 
 By default aligned jars saved to _target/deps_ Change _dependenciesPath_ at your project to something like
