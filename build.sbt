@@ -19,9 +19,9 @@ ScriptedPlugin.scriptedSettings
 
 name := "sbt-dependency-manager"
 
-organization := "sbt.dependency.manager"
+organization := "org.digimead"
 
-version := "0.6.1"
+version <<= (baseDirectory) { (b) => scala.io.Source.fromFile(b / "version").mkString.trim }
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-Xcheckinit", "-Xfatal-warnings")
 

@@ -34,7 +34,7 @@ object Keys {
   lazy val dependencyFilter = TaskKey[Option[ModuleFilter]]("filter", "Filtering dependencies with particular sbt.ModuleID")
   lazy val dependencyIgnoreConfiguration = SettingKey[Boolean]("ignore-configurations", "Ignore configurations while lookup like 'test', for example")
   lazy val dependencyLookupClasspath = TaskKey[Classpath]("lookup-classpath", "Classpath that is used for building the dependency sequence")
-  lazy val dependencyPath = TaskKey[File]("path", "Target directory for fetched jars")
+  lazy val dependencyPath = SettingKey[File]("path", "Target directory for fetched jars")
   lazy val dependencyResourceFilter = SettingKey[ZipEntry => Boolean]("resource-filter", "Fuction for filtering jar content")
   lazy val dependencySkipResolved = SettingKey[Boolean]("skip-resolved", "Skip resolved dependencies with explicit artifacts which points to local resources")
   lazy val dependencyTaskBundle = TaskKey[Unit]("dependency-bundle", "Fetch dependency code and source jars. Save results to bundle")

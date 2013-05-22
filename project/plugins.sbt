@@ -1,5 +1,7 @@
 resolvers += Resolver.url("typesafe repository", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/ivy-releases/"))(Resolver.defaultIvyPatterns)
 
+resolvers += Resolver.url("typesafe shapshots", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/ivy-snapshots/"))(Resolver.defaultIvyPatterns)
+
 libraryDependencies <+= (sbtVersion)((v) =>
       v.split('.') match {
         case Array("0", "11", "3") =>
