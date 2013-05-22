@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+ScriptedPlugin.scriptedSettings
+
 name := "sbt-dependency-manager"
 
 organization := "org.digimead"
@@ -24,5 +26,7 @@ scalacOptions ++= Seq("-unchecked", "-deprecation", "-Xcheckinit", "-Xfatal-warn
 javacOptions ++= Seq("-source", "1.6", "-target", "1.6")
 
 sbtPlugin := true
+
+scriptedBufferLog := false
 
 //logLevel := Level.Debug
